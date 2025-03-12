@@ -18,7 +18,7 @@ model_component <- function(name, .e, args = as.list(parent.frame())) {
   }
 
   func <- function() {}
-  formals(func) <- c(args, list(modeldata = NULL))
+  formals(func) <- c(args, list(modeldata = NULL, .data = NULL))
   body(func) <- substitute(.e)
 
   component <- do.call(purrr::partial, c(list(func), args))

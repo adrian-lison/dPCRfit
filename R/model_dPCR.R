@@ -40,7 +40,7 @@
 #' @export
 #' @import data.table
 concentration_measurements <-
-  function(measurements,
+  function(measurements = NULL,
            id_col = "sample_id",
            concentration_col = "concentration",
            replicate_col = NULL,
@@ -49,6 +49,14 @@ concentration_measurements <-
            total_partitions_col = NULL,
            distribution = "gamma") {
     model_component("concentration_measurements", {
+      if (is.null(measurements)) {
+        if (is.null(.data$df)) {
+          cli::cli_abort("Please provide a `data.frame` with measurements.")
+        } else {
+          measurements <- .data$df
+        }
+      }
+
       measurements <- select_required_cols(
         measurements,
         required_cols = list(
