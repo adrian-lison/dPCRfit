@@ -74,5 +74,16 @@ setClass("modeldata")
   if (!inherits(x, "model_component")) {
     cli::cli_abort("You can only add model_component objects to the modeldata.")
   }
-  return(x$component(modeldata = modeldata))
+
+  tryCatch(
+    {
+      x$component(modeldata = modeldata)
+    },
+    error = function(e) {
+      cli::cli_abort(
+        paste0("Error in '", x$name, "': ", conditionMessage(e)),
+        call = NULL, parent = NA
+      )
+    }
+  )
 }
