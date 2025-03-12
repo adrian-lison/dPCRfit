@@ -18,7 +18,7 @@ model_component <- function(name, .e, args = as.list(parent.frame())) {
   }
 
   func <- function() {}
-  formals(func) <- c(args, list(modeldata = NULL, .data = NULL))
+  formals(func) <- c(args, list(modeldata = NULL))
   body(func) <- substitute(.e)
 
   component <- do.call(purrr::partial, c(list(func), args))
@@ -57,6 +57,7 @@ print.model_component <- function(x, ...) {
 #' @export
 modeldata_init <- function() {
   modeldata <- list()
+  modeldata$.data <- list()
   modeldata$.init <- list()
   modeldata$.metainfo <- list()
   modeldata$.checks <- list()
