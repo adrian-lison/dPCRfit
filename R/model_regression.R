@@ -6,26 +6,26 @@ linear_regression <- function(formula = NULL,
                        beta_prior = c(0,1)) {
   model_component("linear_regression", {
     if (is.null(formula)) {
-      if (is.null(modeldata$.data$formula)) {
+      if (is.null(modeldata$.inputs$formula)) {
         cli::cli_abort("Please provide a formula")
       } else {
-        formula <- modeldata$.data$formula
+        formula <- modeldata$.inputs$formula
       }
     }
 
     if (is.null(df)) {
-      if (is.null(modeldata$.data$df)) {
+      if (is.null(modeldata$.inputs$df)) {
         cli::cli_abort("Please provide a `data.frame` with covariates")
       } else {
-        df <- modeldata$.data$df
+        df <- modeldata$.inputs$df
       }
     }
 
     if (is.null(link)) {
-      if (is.null(modeldata$.data$link)) {
+      if (is.null(modeldata$.inputs$link)) {
         cli::cli_abort("Please provide a link function (identity or log)")
       } else {
-        link <- modeldata$.data$link
+        link <- modeldata$.inputs$link
       }
     }
 

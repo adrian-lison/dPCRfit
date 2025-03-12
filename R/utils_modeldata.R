@@ -57,7 +57,7 @@ print.model_component <- function(x, ...) {
 #' @export
 modeldata_init <- function() {
   modeldata <- list()
-  modeldata$.data <- list()
+  modeldata$.inputs <- list()
   modeldata$.init <- list()
   modeldata$.metainfo <- list()
   modeldata$.checks <- list()

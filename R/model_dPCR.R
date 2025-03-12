@@ -50,10 +50,10 @@ concentration_measurements <-
            distribution = "gamma") {
     model_component("concentration_measurements", {
       if (is.null(measurements)) {
-        if (is.null(modeldata$.data$df)) {
+        if (is.null(modeldata$.inputs$df)) {
           cli::cli_abort("Please provide a `data.frame` with measurements.")
         } else {
-          measurements <- modeldata$.data$df
+          measurements <- modeldata$.inputs$df
         }
       }
 
