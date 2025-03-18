@@ -165,3 +165,50 @@ print.dPCRfit_result <- function(object, ...) {
   cat("Coefficients:\n")
   print(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")])
 }
+
+#' Predict method for dPCR Model Fits
+#'
+#' @description Predict values based on a fitted dPCR-specific regression model.
+#'
+#' @param object Object of class "dPCRfit_result"
+#' @param newdata An optional data frame in which to look for variables with
+#'   which to predict. If omitted, the fitted values are used.
+#' @param interval Type of interval calculation. Can be abbreviated. Currently,
+#'   only "none" and "confidence" are supported. "None" will only give the mean
+#'   response. Confidence will give various summary statistics of the response.
+#'   Prediction intervals (i.e. including dPCR measurement noise) will be
+#'   added in the future.
+#' @param keep_data Logical. If TRUE, the newdata is returned together with the
+#'   predictions.
+#'
+#' @return A data.table with the predicted values. If keep_data is TRUE, the
+#'   covariates are included in this data.table.
+#'
+#' @export
+predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confidence", "prediction"), keep_data = FALSE) {
+  if (missing(newdata) || is.null(newdata)) {
+    newdata <- object$X
+  } else {
+    if (!(is.data.frame(newdata) || is.matrix(newdata))) {
+      cli::cli_abort("newdata must be a data.frame or matrix")
+    }
+    if (!all(object$variables %in% colnames(newdata))) {
+      cli::cli_abort("newdata must contain the same variables as the model was fitted on")
+    }
+    newdata <- as.matrix(newdata[, object$variables])
+    if (any(duplicated(newdata))) {
+      cli::cli_warn("Duplicated rows in newdata are removed.")
+      newdata <- newdata[!duplicated(newdata), ]
+    }
+  }
+  colnames(newdata) <- object$variables
+
+  interval <- match.arg(interval)
+  preds <- predict_response(object, newdata, object$link, interval)
+
+  if (keep_data) {
+    preds <- cbind(newdata, preds)
+  }
+
+  return(preds)
+}
