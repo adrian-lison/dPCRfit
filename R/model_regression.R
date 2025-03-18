@@ -1,3 +1,4 @@
+#' @keywords internal
 linear_regression <- function(formula = NULL,
                        df = NULL,
                        id_col = "sample_id",

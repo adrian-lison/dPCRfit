@@ -1,4 +1,32 @@
-dPCRfit <- function(formula, data, link = "identity",
+#' Fit a dPCR-specific regression model
+#'
+#' @description Fits regression models to gene concentration measurements from
+#'   digital PCR (dPCR) using a dPCR-specific likelihood that accounts for
+#'   concentration-dependent error and non-detects. Supports multiple linear
+#'   regression with identity or log link, incorporating prior information on
+#'   lab parameters. Models are fitted via Stan using the 'cmdstanr' interface.
+#'
+#' @param formula A symbolic description of the model to be fitted, similar to a
+#'   formula provided to `lm`. This is where you specify the covariates.
+#' @param data A data.frame containing the variables in the model.
+#' @param link The link function to use. Can be "identity" or "log".
+#' @param measurements Assumptions about the measurement process and laboratory
+#'   parameters, provided through the [concentration_measurements()] component.
+#' @param noise Assumptions about the noise in the data, provided through the
+#'   [noise_dPCR()] or the [noise_constant_cv()] / [noise_constant_var()]
+#'   component.
+#' @param nondetect Assumptions about the non-detects in the data, provided
+#'   through the [nondetect_dPCR()] or the [nondetect_none()] component.
+#' @param prior_intercept A vector of two values (mean, sd) specifying the
+#'   normal prior for the intercept.
+#' @param prior_coefficients A vector of two values (mean, sd) specifying the
+#'   normal prior for the regression coefficients.
+#' @param fit_opts A list of options for the fitting process. See
+#'   `set_fit_opts()` for details.
+#'
+#' @return An object of class "dPCRfit_result" containing the fitted model and
+#'   additional details.
+#' @export
 dPCRfit <- function(formula, data, link = c("identity", "log"),
                     measurements = concentration_measurements(),
                     noise = noise_dPCR(),
@@ -127,6 +155,11 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
   return(result)
 }
 
+#' Provide a summary of a dPCR Model Fit
+#'
+#' @description Summarizes a dPCR Model Fit, including coefficient estimates and
+#'   model diagnostics.
+#'
 #' @export
 summary.dPCRfit_result <- function(object, ...) {
   cat("Call:\n")
@@ -158,6 +191,10 @@ summary.dPCRfit_result <- function(object, ...) {
   }
 }
 
+#' Print method for dPCR Model Fits
+#'
+#' @description Prints a short summary of a dPCR Model Fit
+#'
 #' @export
 print.dPCRfit_result <- function(object, ...) {
   cat("Call:\n")
