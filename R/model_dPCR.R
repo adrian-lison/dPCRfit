@@ -89,7 +89,10 @@ concentration_measurements <-
 
       # explicit replicates
       if (!is.null(replicate_col)) {
+        modeldata$.metainfo$obs_ids <- measurements[, c("sample_id", "replicate_id")]
         modeldata$replicate_ids <- as.integer(measurements[["replicate_id"]])
+      } else {
+        modeldata$.metainfo$obs_ids <- measurements[, c("sample_id")]
       }
 
       # number of averaged technical replicates
