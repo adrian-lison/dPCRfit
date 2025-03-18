@@ -1,4 +1,5 @@
 dPCRfit <- function(formula, data, link = "identity",
+dPCRfit <- function(formula, data, link = c("identity", "log"),
                     measurements = concentration_measurements(),
                     noise = noise_dPCR(),
                     nondetect = nondetect_dPCR(),
@@ -8,6 +9,7 @@ dPCRfit <- function(formula, data, link = "identity",
                     ) {
   md <- modeldata_init()
   md$.inputs$df <- data
+  link <- match.arg(link)
   md <- md +
     measurements +
     noise +
@@ -21,6 +23,7 @@ dPCRfit <- function(formula, data, link = "identity",
 
   # prepare model data
   inits <- md$.init
+  metainfo <- md$.metainfo
   md <- suppressWarnings(rlang::flatten(md[!(names(md) %in% c(
     ".metainfo", ".checks", ".str", ".init",
     ".sewer_data", ".sewer_assumptions"
@@ -42,6 +45,8 @@ dPCRfit <- function(formula, data, link = "identity",
     link = link,
     nrow = nrow(data),
     variables = colnames(md$X),
+    X = md$X,
+    metainfo = metainfo,
     fit_opts = fit_opts
   )
 
@@ -102,14 +107,20 @@ dPCRfit <- function(formula, data, link = "identity",
 
   result$fit <- fit_res
 
-  result$coef_summary <- rbindlist(list(
-    alpha = as.data.table(fit_res$summary("alpha")),
-    beta = as.data.table(fit_res$summary("beta"))
-  ))
-  # rename beta variables with the original names
-  result$coef_summary[, variable := c("(Intercept)", result$variables)]
-
-  result$diagnostic_summary <- fit_res$diagnostic_summary()
+  if (fitting_successful) {
+    tryCatch(result$coef_summary <- summarize_coefs(result),
+             error = function(e) cli::cli_warn(paste(
+               "Could not summarize results:", e$message
+               )))
+    tryCatch(result$residuals_summary <- summarize_residuals(result),
+             error = function(e) cli::cli_warn(paste(
+               "Could not summarize residuals:", e$message
+             )))
+    tryCatch(result$diagnostic_summary <- fit_res$diagnostic_summary(),
+             error = function(e) cli::cli_warn(paste(
+               "Could not obtain model diagnostics:", e$message
+             )))
+  }
 
   class(result) <- "dPCRfit_result"
 
