@@ -9,23 +9,26 @@ Authors@R:
            email = "adrian.lison@bsse.ethz.ch",
            comment = c(ORCID = "0000-0002-6822-8437"))
 Maintainer: Adrian Lison <adrian.lison@bsse.ethz.ch>
-Description: dPCRfit is an R package for fitting regression models to gene
- concentrations measurements obtained via digital PCR (dPCR). The models use a
- dPCR-specific likelihood function that accounts for the statistical properties 
- of dPCR such as concentration-dependent measurement error and non-detects.
-    This package is useful for directly fitting regression models to dPCR 
- concentration measurements, for example when the PCR partition counts are not 
- available. Information about laboratory parameters such as the partition volume
- or dilution of the sample can be provided as priors to the models.
-    Models can be specified via a formula similar to the `lm` function. The 
- package currently supports fixed-effect multiple linear regression, with an 
- identity or logarithmic link function. Models are fitted using stan through 
- the `cmdstanr` interface.
+Description: Fit regression models to gene concentrations measurements obtained 
+    via digital PCR (dPCR). A replacement for `lm` that uses a dPCR-specific 
+    likelihood function, accounting for concentration-dependent measurement 
+    error and non-detects.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
+Depends:
+    R (>= 3.5.0)
+Imports: 
+    cmdstanr,
+    data.table,
+    rlang,
+    cli,
+    stringr,
+    purrr (>= 1.0.1)
+Suggests:
+    testthat (>= 3.0.0)
 Remotes:
     stan-dev/cmdstanr
 SystemRequirements:
