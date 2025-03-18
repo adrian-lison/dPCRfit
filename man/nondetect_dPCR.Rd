@@ -16,19 +16,19 @@ samples anyway, parameter estimates are practically not affected.}
 }
 \description{
 Concentrations below a certain threshold may not be detectable
-  and thus erroneously measured as 0. This option adjusts for a
-  non-detects based on the statistical properties of digital PCR (dPCR)
-  and includes zero measurements in the likelihood.
+and thus erroneously measured as 0. This option adjusts for a
+non-detects based on the statistical properties of digital PCR (dPCR)
+and includes zero measurements in the likelihood.
 
 In effect, zero measurements provide a signal that the
-  concentration in the respective sample was likely below the limit of
-  detection, but we don't know what the exact concentration was.
+concentration in the respective sample was likely below the limit of
+detection, but we don't know what the exact concentration was.
 }
 \details{
 Non-detects are modeled using a hurdle model. The model
-  uses the number of partitions in the dPCR reaction and the conversion
-  factor as defined and estimated by [noise_estimate_dPCR()]. It can
-  therefore only be used together with `noise = noise_estimate_dPCR()` in
-  [concentration_measurements()].
+uses the number of partitions in the dPCR reaction and the conversion
+factor as defined and estimated by \code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}}. It can
+therefore only be used together with \code{noise = noise_estimate_dPCR()} in
+\code{\link[=concentration_measurements]{concentration_measurements()}}.
 }
 \concept{{LOD models}}

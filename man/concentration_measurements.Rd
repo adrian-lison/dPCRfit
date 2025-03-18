@@ -16,7 +16,7 @@ concentration_measurements(
 )
 }
 \arguments{
-\item{measurements}{A `data.frame` with each row representing one dPCR
+\item{measurements}{A \code{data.frame} with each row representing one dPCR
 measurement. Must have at least a column with sample ids and a column with
 concentration measurements.}
 
@@ -27,28 +27,28 @@ concentrations.}
 
 \item{replicate_col}{Name of the column containing the replicate ID of each
 measurement. This is used to identify multiple measurements made of a
-sample from the same date. Should be `NULL` if only one measurement per
+sample from the same date. Should be \code{NULL} if only one measurement per
 sample was made.}
 
 \item{n_averaged}{The number of replicates over which the measurements have
 been averaged. This is typically used as an alternative to providing
 several replicates per sample (i.e. the concentration provided in the
-`measurements` `data.frame` is the average of several replicates).
+\code{measurements} \code{data.frame} is the average of several replicates).
 Can be either a single number (it is then assumed that the number of
 averaged replicates is the same for each observation) or a vector (one
 value for each observation).}
 
-\item{n_averaged_col}{Name of the column in the `measurements` data.frame
+\item{n_averaged_col}{Name of the column in the \code{measurements} data.frame
 containing the number of replicates over which the measurements have been
-averaged. This is an alternative to specifying `n_averaged`.}
+averaged. This is an alternative to specifying \code{n_averaged}.}
 
-\item{total_partitions_col}{Name of the column in the `measurements`
+\item{total_partitions_col}{Name of the column in the \code{measurements}
 data.frame containing the total number of partitions (e.g. droplets for
 ddPCR) in the dPCR reaction of each measurement. Only applies to
 concentration measurements obtain via dPCR. Can be used by the
-[noise_estimate_dPCR()] and [LOD_estimate_dPCR()] modeling components. Note
+\code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}} and \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} modeling components. Note
 that this is really the
-*total* number of partitions, not just the number of positive partitions.}
+\emph{total} number of partitions, not just the number of positive partitions.}
 
 \item{distribution}{Parametric distribution for concentration measurements.
 Currently supported are "gamma" (default and recommended), "log-normal",

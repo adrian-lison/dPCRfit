@@ -15,19 +15,21 @@ variation of concentration measurements.}
 }
 \description{
 This option estimates measurement noise via a constant variance
-  model.This is a misspecification for dPCR data and is only supported for
-  comparison purposes.
+model.This is a misspecification for dPCR data and is only supported for
+comparison purposes.
 
 For a constant coefficient of variation model, see
-  [noise_constant_cv()], and for a non-constant coefficient of
-  variation model, see [noise_dPCR()].
+\code{\link[=noise_constant_cv]{noise_constant_cv()}}, and for a non-constant coefficient of
+variation model, see \code{\link[=noise_dPCR]{noise_dPCR()}}.
 }
 \details{
 Note that although this model keeps the variance constant, the prior
-  for the measurement noise is still in terms of the (average) coefficient of
-  variation (CV). This makes prior specification easier since the CV is
-  unitless.
+for the measurement noise is still in terms of the (average) coefficient of
+variation (CV). This makes prior specification easier since the CV is
+unitless.
 
 The priors of this component have the following functional form:
-- coefficient of variation of concentration measurements: `Truncated normal`
+\itemize{
+\item coefficient of variation of concentration measurements: \verb{Truncated normal}
+}
 }

@@ -21,7 +21,7 @@ noise_dPCR(
 \arguments{
 \item{cv_prior_mu}{Prior (mean) on the coefficient of variation of
 concentration measurements. Note that in contrast to using
-[noise_estimate()], this does *not* include the technical noise of the
+\code{\link[=noise_estimate]{noise_estimate()}}, this does \emph{not} include the technical noise of the
 digital PCR. This is because the dPCR noise is explicitly modeled (using
 the number of partitions and conversion factor).}
 
@@ -37,8 +37,8 @@ total number of partitions will be fixed to the prior mean and not
 estimated.}
 
 \item{total_partitions_observe}{If TRUE, the total number of partitions is
-taken from the supplied measurements `data.frame`. This requires that the
-argument `total_partitions_col` is specified in [concentrations_observe()].}
+taken from the supplied measurements \code{data.frame}. This requires that the
+argument \code{total_partitions_col} is specified in \code{\link[=concentrations_observe]{concentrations_observe()}}.}
 
 \item{partition_variation_prior_mu}{Prior (mean) on the coefficient of
 variation of the total number of partitions in the dPCR reaction. Usually,
@@ -64,7 +64,7 @@ factor will be fixed to the prior mean and not estimated.}
 before the PCR assay. Currently supported are "log-normal" and "gamma". The
 choice of the parametric distribution typically makes no relevant
 difference for the noise model, but can make a relevant difference for the
-LOD model if [LOD_estimate_dPCR()] is used.}
+LOD model if \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} is used.}
 
 \item{use_taylor_approx}{If TRUE (default), a Taylor expansion approximation
 is used to estimate the CV of measurements under pre-PCR noise. The
@@ -74,23 +74,25 @@ questionable).}
 }
 \description{
 This option models concentration measurements using a
-  coefficient of variation model specialized for digital PCR (e.g. digital
-  droplet PCR). The coefficient of variation is modeled as a function of the
-  expected concentration according to the statistical properties of dPCR.
+coefficient of variation model specialized for digital PCR (e.g. digital
+droplet PCR). The coefficient of variation is modeled as a function of the
+expected concentration according to the statistical properties of dPCR.
 }
 \details{
-The conversion factor (see `volume_scaled_prior_mu`,
-  `volume_scaled_prior_sigma`) is the partition volume v multiplied with a
-  scaling factor s. The scaling factor accounts concentration differences
-  between the sample and the reaction mix, for example due to extraction or
-  adding of reagents. For example, if the partition volume is 4.5e-7 mL and the
-  scaling factor is 100:3 (i.e. 100 gc/mL in the original
-  sample correspond to 3 gc/mL in the PCR reaction), then the
-  overall conversion factor is 4.5e-7 * 100 / 3 = 1.5e-5.
+The conversion factor (see \code{volume_scaled_prior_mu},
+\code{volume_scaled_prior_sigma}) is the partition volume v multiplied with a
+scaling factor s. The scaling factor accounts concentration differences
+between the sample and the reaction mix, for example due to extraction or
+adding of reagents. For example, if the partition volume is 4.5e-7 mL and the
+scaling factor is 100:3 (i.e. 100 gc/mL in the original
+sample correspond to 3 gc/mL in the PCR reaction), then the
+overall conversion factor is 4.5e-7 * 100 / 3 = 1.5e-5.
 
 The priors of this component have the following functional form:
-- coefficient of variation of concentration measurements (`cv`): `Truncated normal`
-- mean number of partitions in dPCR: `Truncated normal`
-- coefficient of variation of number of partitions in dPCR: `Truncated normal`
-- conversion factor for dPCR: `Truncated normal`
+\itemize{
+\item coefficient of variation of concentration measurements (\code{cv}): \verb{Truncated normal}
+\item mean number of partitions in dPCR: \verb{Truncated normal}
+\item coefficient of variation of number of partitions in dPCR: \verb{Truncated normal}
+\item conversion factor for dPCR: \verb{Truncated normal}
+}
 }

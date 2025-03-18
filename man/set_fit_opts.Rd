@@ -8,14 +8,14 @@ set_fit_opts(sampler = sampler_stan_mcmc(), model = model_stan_opts())
 }
 \arguments{
 \item{sampler}{Which type of sampler should be used for model fitting?
-Currently, only [sampler_stan_mcmc()] is supported.}
+Currently, only \code{\link[=sampler_stan_mcmc]{sampler_stan_mcmc()}} is supported.}
 
 \item{model}{Details about the model file to be used, see
-[model_stan_opts()].}
+\code{\link[=model_stan_opts]{model_stan_opts()}}.}
 }
 \value{
-A `list` with the model fitting options.
+A \code{list} with the model fitting options.
 }
 \description{
-Sets model fitting options in `dPCRfit`.
+Sets model fitting options in \code{dPCRfit}.
 }

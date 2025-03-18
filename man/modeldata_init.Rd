@@ -7,13 +7,13 @@
 modeldata_init()
 }
 \value{
-A `modeldata` object containing data and specifications of the model
-  to be fitted. Can be combined with other model components to
-  add data and model specifications.
+A \code{modeldata} object containing data and specifications of the model
+to be fitted. Can be combined with other model components to
+add data and model specifications.
 
-The `modeldata` object also includes information about parameter
-  initialization (`.init`), meta data (`.metainfo`), and checks to be
-  performed before model fitting (`.checks`).
+The \code{modeldata} object also includes information about parameter
+initialization (\code{.init}), meta data (\code{.metainfo}), and checks to be
+performed before model fitting (\code{.checks}).
 }
 \description{
 Construct an unspecified model

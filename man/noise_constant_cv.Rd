@@ -15,12 +15,14 @@ variation of concentration measurements.}
 }
 \description{
 This option estimates measurement noise via a constant
-  coefficient of variation model.
+coefficient of variation model.
 
 For a non-constant coefficient of variation model, see
-  [noise_dPCR()].
+\code{\link[=noise_dPCR]{noise_dPCR()}}.
 }
 \details{
 The priors of this component have the following functional form:
-- coefficient of variation of concentration measurements (`cv`): `Truncated normal`
+\itemize{
+\item coefficient of variation of concentration measurements (\code{cv}): \verb{Truncated normal}
+}
 }

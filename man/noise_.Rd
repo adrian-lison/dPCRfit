@@ -46,8 +46,8 @@ total number of partitions will be fixed to the prior mean and not
 estimated.}
 
 \item{total_partitions_observe}{If TRUE, the total number of partitions is
-taken from the supplied measurements `data.frame`. This requires that the
-argument `total_partitions_col` is specified in [concentrations_observe()].}
+taken from the supplied measurements \code{data.frame}. This requires that the
+argument \code{total_partitions_col} is specified in \code{\link[=concentrations_observe]{concentrations_observe()}}.}
 
 \item{partition_variation_prior_mu}{Prior (mean) on the coefficient of
 variation of the total number of partitions in the dPCR reaction. Usually,
@@ -73,7 +73,7 @@ factor will be fixed to the prior mean and not estimated.}
 before the PCR assay. Currently supported are "log-normal" and "gamma". The
 choice of the parametric distribution typically makes no relevant
 difference for the noise model, but can make a relevant difference for the
-LOD model if [LOD_estimate_dPCR()] is used.}
+LOD model if \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} is used.}
 
 \item{use_taylor_approx}{If TRUE (default), a Taylor expansion approximation
 is used to estimate the CV of measurements under pre-PCR noise. The
@@ -83,9 +83,8 @@ questionable).}
 }
 \description{
 This helper function is called from specific noise modeling
-  function. [noise_constant_cv()] is a constant coefficient of variation
-  model, [noise_constant_var()] is a constant variance model, and
-  [noise_dPCR()] is a noise model specialized for digital PCR (`cv_type =
-  "dPCR"`).
+function. \code{\link[=noise_constant_cv]{noise_constant_cv()}} is a constant coefficient of variation
+model, \code{\link[=noise_constant_var]{noise_constant_var()}} is a constant variance model, and
+\code{\link[=noise_dPCR]{noise_dPCR()}} is a noise model specialized for digital PCR (\code{cv_type = "dPCR"}).
 }
 \keyword{internal}

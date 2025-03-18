@@ -11,6 +11,6 @@ This option drops all zero measurements from the likelihood.
 }
 \details{
 Dropping zero measurements implicitly conditions on positive
-  measurements. This can lead to an upward bias when estimating low
-  concentrations.
+measurements. This can lead to an upward bias when estimating low
+concentrations.
 }

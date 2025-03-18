@@ -10,7 +10,7 @@ withWarnings(expr)
 \item{expr}{Expression with the computation to run}
 }
 \value{
-A `list`, with two elements: value and warnings
+A \code{list}, with two elements: value and warnings
 }
 \description{
 Collect warnings arising during computation of a result

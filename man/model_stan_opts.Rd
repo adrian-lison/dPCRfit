@@ -7,11 +7,11 @@
 model_stan_opts(threads = FALSE, force_recompile = FALSE)
 }
 \arguments{
-\item{threads}{Should multihreading be enabled? Default is `FALSE`, as
-`dPCRfit` currently does not support within-chain parallelism.}
+\item{threads}{Should multihreading be enabled? Default is \code{FALSE}, as
+\code{dPCRfit} currently does not support within-chain parallelism.}
 
 \item{force_recompile}{Should recompilation be forced before model fitting?
-If `FALSE` (default), the model is only recompiled when changes to the
+If \code{FALSE} (default), the model is only recompiled when changes to the
 model code are detected. However, as the change detection is not fully
 reliable, it is sometimes necessary to force recompilation after having
 made changes to the stan code.}

@@ -7,7 +7,7 @@
 init_from_location_scale_prior(prior)
 }
 \arguments{
-\item{prior}{Prior for parameter as provided by [set_prior()]. Should be a
+\item{prior}{Prior for parameter as provided by \code{\link[=set_prior]{set_prior()}}. Should be a
 location and scale prior (first element location, second element scale).}
 }
 \value{
@@ -15,13 +15,13 @@ Location of the prior plus 1/4 of the scale.
 }
 \description{
 Initialization using the prior is often better than initializing
-  with zero (and if the parameter is strictly positive, zero is not possible
-  at all). This function provides as init value the location of the prior
-  plus 1/4 of the scale. This ensure a positive init even if the
-  mean is zero (useful for truncated normal priors for example.)
+with zero (and if the parameter is strictly positive, zero is not possible
+at all). This function provides as init value the location of the prior
+plus 1/4 of the scale. This ensure a positive init even if the
+mean is zero (useful for truncated normal priors for example.)
 }
 \details{
 If the provided prior has zero variance, it is assumed that the
-  parameter will not be sampled and an empty init is returned.
+parameter will not be sampled and an empty init is returned.
 }
 \keyword{internal}
