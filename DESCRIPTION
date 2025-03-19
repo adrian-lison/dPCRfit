@@ -29,6 +29,8 @@ Imports:
     purrr (>= 1.0.1)
 Suggests:
     testthat (>= 3.0.0)
+Config/Needs/website:
+    hadley/emo
 Remotes:
     stan-dev/cmdstanr
 SystemRequirements:

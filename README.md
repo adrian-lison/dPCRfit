@@ -14,33 +14,36 @@ license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/
 ## About
 
 The `dPCRfit` R package allows fitting regression models to gene
-concentrations measurements obtained via digital PCR (dPCR). It uses a
-dPCR-specific likelihood function that accounts for the statistical
-properties of dPCR - such as concentration-dependent measurement error
-and non-detects. Models can be specified via a formula similar to the
-`lm` function.
+concentration measurements obtained via digital PCR (dPCR). It uses a
+dPCR-specific likelihood that accounts for non-detects and
+concentration-dependent measurement error. You can specify regression
+models via a simple formula like in the base R `lm` function.
 
 This package is useful for directly fitting regression models to dPCR
 concentration measurements, for example when partition counts are not
 available.
 
 Information about laboratory parameters (e.g. partition volume or sample
-dilution) can be provided as priors. Currently supported are
-fixed-effect linear models, with an identity or logarithmic link
-function. Models are fitted using stan through the cmdstanr interface.
+dilution) can be provided as priors. The package currently supports
+fixed-effect linear models (identity or log link). Models are fitted
+using `stan` through the `cmdstanr` interface.
 
 ## Installing the package
 
-The development version of `dPCRfit` can be installed from GitHub as
-shown below. Please note that the package is still in early development
-and may be subject to breaking changes.
+Install the development version of `dPCRfit` from GitHub:
 
 ``` r
 remotes::install_github("adrian-lison/dPCRfit", dependencies = TRUE)
 ```
 
-`dPCRfit` also requires CmdStan to be installed on your system. This can
-be done using the `install_cmdstan()` function from `cmdstanr`. If you
+⚠️ Note that `dPCRfit` also requires CmdStan to be installed on your
+system.
+<details>
+<summary>
+Click here for details on installing stan.
+</summary>
+
+Simply run the `install_cmdstan()` function from `cmdstanr`. If you
 experience any problems installing CmdStan, see the [cmdstanr
 vignette](https://mc-stan.org/cmdstanr/articles/cmdstanr.html) for help.
 
@@ -62,6 +65,7 @@ If the models are not successfully compiled, please ensure that
 using `cmdstanr::install_cmdstan()`. If the problem persists, please run
 `dPCRfit::dPCRfit_compile(verbose = TRUE)` and post the output in a new
 issue on GitHub, along with your `cmdstanr::cmdstan_version()`.
+</details>
 
 ## Introduction
 
@@ -76,15 +80,15 @@ library(ggplot2) # load ggplot2 for plotting
 ### Load example data
 
 We load an example dataset with simulated dPCR measurements. The dataset
-represents hypothetical measurements of a target gene concentration in
-samples with varying biomass.
+represents hypothetical measurements of a target gene concentration from
+samples with different biomass.
 
 ``` r
 dPCR_data <- dPCR_linear_simulated
 ```
 
 We can plot the simulated linear relationship between biomass and target
-gene concentration.
+gene concentration using ggplot:
 
 ``` r
 ggplot(dPCR_data, aes(x=biomass, y=concentration)) +
@@ -97,10 +101,10 @@ ggplot(dPCR_data, aes(x=biomass, y=concentration)) +
 
 ## Fit a linear model
 
-We can use `dPCRfit` to fit a linear regression model to the simulated
-concentration measurements. For this, we must first define a model of
-the measurement noise. In our simulated data, we assumed a dPCR assay
-with the following parameters:
+We will now use `dPCRfit` to fit a linear regression model to the
+simulated concentration measurements. For this, we must first define a
+model of the measurement noise. In our simulated data, we assumed a dPCR
+assay with the following parameters:
 
 - total number of partitions: 25’000
 - concentration conversion factor (gc per partition for one
@@ -112,8 +116,10 @@ assay with suitable parameters:
 
 ``` r
 noise_model <- noise_dPCR(
-          total_partitions_prior_mu = 25000, total_partitions_prior_sigma = 0, # we know that there are 25000 partitions
-          volume_scaled_prior_mu = 1.73e-5, volume_scaled_prior_sigma = 0, # we know the conversion factor
+          total_partitions_prior_mu = 25000, # there are 25000 partitions
+          total_partitions_prior_sigma = 0, # fix the number of partitions
+          volume_scaled_prior_mu = 1.73e-5, # the conversion factor
+          volume_scaled_prior_sigma = 0, # fix the conversion factor
           prePCR_noise_type = "lognormal" # we assume that pre-PCR noise is log-normally distributed
         )
 ```
@@ -122,11 +128,11 @@ Note that in this example, by setting the standard deviation (sigma) of
 the priors to 0, we fix the parameters to their true values. In
 practice, the exact number of partitions or the conversion factor may be
 uncertain, which you can express by providing a prior with positive
-standard deviation. The exact parameter value will then be estimated
-jointly from the data.
+standard deviation. The parameter value will then be estimated jointly
+from the data.
 
-Once we have a suitable noise model, we can run `dPCRfit` to fit a
-linear regression to our data:
+Once we have a suitable noise model, we can run a linear regression
+using `dPCRfit`:
 
 ``` r
 fitted_model <- dPCRfit(
@@ -157,8 +163,8 @@ fitted_model <- dPCRfit(
 #> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
 #> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
 #> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
@@ -166,39 +172,39 @@ fitted_model <- dPCRfit(
 #> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 3 finished in 15.8 seconds.
-#> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 2 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 3 finished in 15.5 seconds.
+#> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 4 finished in 17.0 seconds.
+#> Chain 4 finished in 16.7 seconds.
 #> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
 #> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
-#> Chain 1 finished in 18.0 seconds.
+#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 1 finished in 17.6 seconds.
 #> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 2 finished in 20.7 seconds.
+#> Chain 2 finished in 20.1 seconds.
 #> 
 #> All 4 chains finished successfully.
-#> Mean chain execution time: 17.9 seconds.
-#> Total execution time: 20.9 seconds.
+#> Mean chain execution time: 17.5 seconds.
+#> Total execution time: 20.4 seconds.
 ```
 
 ## Results
