@@ -62,3 +62,55 @@ model_stan_opts <- function(threads = FALSE, force_recompile = FALSE) {
   opts <- as.list(environment())
   return(opts)
 }
+
+#' Compile the dPCRfit model
+#'
+#' @description The stan model used by dPCRfit needs to be compiled for your
+#'   device. This is only necessary once after installing or updating the
+#'   package.
+#'
+#' @param force_recompile If TRUE, the model will be recompiled even if it
+#'   has already been successfully compiled.
+#' @param verbose If TRUE, warnings and detailed errors from the compilation are
+#'   printed. This can help to diagnose compilation issues.
+#'
+#' @details If the model is not successfully compiled, please
+#'   ensure that `cmdstan` is properly set up and try updating it to a newer
+#'   version using [cmdstanr::install_cmdstan()]. If the problem persists,
+#'   please run [dPCRfit_compile(verbose = TRUE)] and post the output in
+#'   a new issue on GitHub, along with your [cmdstanr::cmdstan_version()].
+#'
+#' @export
+dPCRfit_compile <- function(force_recompile = FALSE, verbose = FALSE) {
+  get_model <- function() {
+    cmdstanr::cmdstan_model(
+    system.file(
+      "stan",
+      "dPCRglm.stan",
+      package = "dPCRfit"
+    ),
+    force_recompile = force_recompile
+  )
+    return(invisible(TRUE))
+  }
+
+  success <- tryCatch(
+    {
+      if (verbose == FALSE) {
+        suppressMessages(
+          get_model()
+        )
+      } else {
+        get_model()
+      }
+      TRUE
+    },
+    error = function(e) { FALSE }
+  )
+
+  if (success) {
+    cli::cli_alert("dPCRfit model compiled successfully.")
+  } else {
+    cli::cli_warn("The dPCRfit stan model could not be compiled.")
+  }
+}
