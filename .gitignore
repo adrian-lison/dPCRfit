@@ -9,3 +9,5 @@ inst/stan/*
 .Ruserdata
 
 *.DS_Store
+
+README_cache/
