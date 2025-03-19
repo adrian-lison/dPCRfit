@@ -20,6 +20,7 @@ summarize_residuals <- function(res) {
   return(cbind(res$metainfo$obs_ids, residuals))
 }
 
+#' @importFrom posterior %**%
 predict_response <- function(res, newdata, link, interval) {
   alpha_draws <- posterior::as_draws_rvars(res$fit$draws("alpha"))$alpha
   beta_draws <- posterior::as_draws_rvars(res$fit$draws("beta"))$beta
