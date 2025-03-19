@@ -109,3 +109,36 @@ withWarnings <- function(expr) {
   val <- withCallingHandlers(expr, warning = wHandler)
   list(value = val, warnings = myWarnings)
 }
+
+#' @keywords internal
+format_table <- function(df) {
+  # Ensure df is a data frame
+  if (!is.data.frame(df)) stop("Input must be a data frame")
+
+  # Convert all columns to character for consistent formatting (numeric columns with max 2 decimals)
+  df[] <- lapply(df, function(col) {
+    if (is.numeric(col)) {
+      format(col, digits = 4)
+    } else {
+      as.character(col)
+    }
+  })
+
+  # Determine max width per column
+  col_widths <- sapply(df, function(col) max(nchar(col), na.rm = TRUE))
+  col_widths <- pmax(col_widths, nchar(names(df)))  # Ensure headers are included
+
+  # Function to format each row with proper spacing
+  format_row <- function(row) {
+    paste(mapply(sprintf, paste0("%-", col_widths, "s"), row), collapse = "  ")
+  }
+
+  # Format header and rows
+  header <- format_row(names(df))
+  rows <- apply(df, 1, format_row)
+
+  # Combine into a single text output
+  table_text <- paste(c(header, rows), collapse = "\n")
+
+  return(table_text)
+}

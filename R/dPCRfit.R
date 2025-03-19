@@ -167,7 +167,9 @@ summary.dPCRfit_result <- function(object, ...) {
   cat("Number of observations:", object$nrow, "\n")
   cat("\n")
   cat("Coefficients:\n")
-  print(object$coef_summary)
+  # print object$coef_summary as character table, not notebook output
+  cat(format_table(object$coef_summary))
+  cat("\n")
   cat("\n")
   cat("Fitted via MCMC using ", object$fit_opts$sampler$chains, " chains with each:\n", sep = "")
   cat(object$fit_opts$sampler$iter_warmup, " warm-up iterations", "\n", sep = "")
@@ -200,7 +202,7 @@ print.dPCRfit_result <- function(object, ...) {
   cat("Call:\n")
   cat("dPCRfit(formula = ", format(object$formula), ", link = ", object$link, ")\n\n", sep = "")
   cat("Coefficients:\n")
-  print(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")])
+  cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")]))
 }
 
 #' Predict method for dPCR Model Fits
