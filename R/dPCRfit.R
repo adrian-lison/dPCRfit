@@ -54,7 +54,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
   metainfo <- md$.metainfo
   md <- suppressWarnings(rlang::flatten(md[!(names(md) %in% c(
     ".metainfo", ".checks", ".str", ".init",
-    ".sewer_data", ".sewer_assumptions"
+    ".sewer_data", ".sewer_assumptions", ".inputs"
   ))]))
   md <- md[
     stringr::str_detect(names(md), c("_prior_text"), negate = TRUE)

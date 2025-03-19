@@ -72,6 +72,8 @@ concentration_measurements <-
       measurements <- measurements[!is.na(concentration) & !is.na(sample_id), ]
       measurements[, concentration := as.numeric(concentration)]
 
+      modeldata$.inputs$id_col <- id_col
+
       if (nrow(measurements)==0) {
         cli::cli_abort(
           "The provided measurements `data.frame` contains no valid measurements."

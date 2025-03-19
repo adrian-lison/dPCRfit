@@ -1,7 +1,7 @@
 #' @keywords internal
 linear_regression <- function(formula = NULL,
                        df = NULL,
-                       id_col = "sample_id",
+                       id_col = NULL,
                        link = NULL,
                        alpha_prior = c(0,1),
                        beta_prior = c(0,1)) {
@@ -19,6 +19,14 @@ linear_regression <- function(formula = NULL,
         cli::cli_abort("Please provide a `data.frame` with covariates")
       } else {
         df <- modeldata$.inputs$df
+      }
+    }
+
+    if (is.null(id_col)) {
+      if (is.null(modeldata$.inputs$id_col)) {
+        cli::cli_abort("Please provide a column name for the sample ids")
+      } else {
+        id_col <- modeldata$.inputs$id_col
       }
     }
 
