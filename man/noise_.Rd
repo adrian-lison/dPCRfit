@@ -53,7 +53,7 @@ argument \code{total_partitions_col} is specified in \code{\link[=concentrations
 variation of the total number of partitions in the dPCR reaction. Usually,
 the maximum number of partitions possible for a given dPCR chip is not
 reached, i.e. a certain number of partitions is lost. This loss varies
-between PCR runs, and is modeled as log-normal distributed in EpiSewer.}
+between PCR runs, and is modeled as log-normal distributed.}
 
 \item{partition_variation_prior_sigma}{Prior (standard deviation) on the
 coefficient of variation of the total number of partitions in the dPCR
