@@ -271,6 +271,7 @@ predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confid
   if (all(X[, 1] == 1)) {
     X <- subset(X, select = -1)
   }
+  newdata[[all.vars(rlang::f_lhs(object$formula))]] <- NULL # remove dummy response
   colnames(X) <- object$covariates_design
 
   interval <- match.arg(interval)
