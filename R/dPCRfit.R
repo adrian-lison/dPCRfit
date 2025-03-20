@@ -36,6 +36,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
                     fit_opts = set_fit_opts()
                     ) {
   md <- modeldata_init()
+  data <- setDT(data)
   md$.inputs$df <- data
   link <- match.arg(link)
   md <- md +
@@ -72,9 +73,9 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
     formula = formula,
     link = link,
     nrow = nrow(data),
-    variables = all.vars(rlang::f_rhs(formula)),
-    variables_X = colnames(md$X),
-    X = md$X,
+    covariates = all.vars(rlang::f_rhs(formula)),
+    covariates_design = colnames(md$X),
+    covariates_df = data[, .SD, .SDcols = all.vars(rlang::f_rhs(formula))],
     metainfo = metainfo,
     fit_opts = fit_opts
   )
@@ -211,7 +212,7 @@ print.dPCRfit_result <- function(object, ...) {
 #' @description Predict values based on a fitted dPCR-specific regression model.
 #'
 #' @param object Object of class "dPCRfit_result"
-#' @param newdata An optional data frame in which to look for variables with
+#' @param newdata An optional data frame in which to look for covariates with
 #'   which to predict. If omitted, the fitted values are used.
 #' @param interval Type of interval calculation. Can be abbreviated. Currently,
 #'   only "none" and "confidence" are supported. "None" will only give the mean
@@ -226,28 +227,51 @@ print.dPCRfit_result <- function(object, ...) {
 #'
 #' @export
 predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confidence", "prediction"), keep_data = FALSE) {
+
   if (missing(newdata) || is.null(newdata)) {
-    X <- object$X
-  } else {
-    if (!(is.data.frame(newdata) || is.matrix(newdata))) {
-      cli::cli_abort("newdata must be a data.frame or matrix")
-    }
-    if (!all(object$variables %in% colnames(newdata))) {
-      cli::cli_abort("newdata must contain the same variables as the model was fitted on")
-    }
-    newdata[[all.vars(rlang::f_lhs(object$formula))]] <- 0
-    newdata <- as.data.frame(newdata[, all.vars(object$formula)])
-    if (any(duplicated(newdata))) {
-      cli::cli_warn("Duplicated rows in newdata are removed.")
-      newdata <- newdata[!duplicated(newdata), ]
-    }
-    X <- model.matrix(object$formula, data = newdata)
-    # if first column of X corresponds to an intercept, remove it
-    if (all(X[, 1] == 1)) {
-      X <- subset(X, select = -1)
+    newdata <- data.table::copy(object$covariates_df)
+  } else if (!(is.data.frame(newdata) || is.matrix(newdata))) {
+    cli::cli_abort("newdata must be a data.frame or matrix")
+  } else if (!all(object$covariates %in% colnames(newdata))) {
+    cli::cli_abort(paste(
+      "newdata must contain the following covariates:",
+      paste(object$covariates, collapse = ", ")
+      ))
+  }
+  setDT(newdata)
+  newdata[[all.vars(rlang::f_lhs(object$formula))]] <- 0 # dummy response
+  newdata <- newdata[, .SD, .SDcols = all.vars(object$formula)]
+  if (any(duplicated(newdata))) {
+    cli::cli_warn("Duplicated rows in newdata are removed.")
+    newdata <- newdata[!duplicated(newdata), ]
+  }
+  for (col in object$covariates) {
+    col_data <- object$covariates_df[[col]]
+    if (is.factor(col_data) || is.character(col_data)) {
+      if (is.character(col_data)) {
+        col_data <- factor(col_data)
+      }
+      if (!all(unique(newdata[[col]]) %in% levels(col_data))) {
+        cli::cli_abort(paste(
+          "Variable", col,
+          "in newdata contains level(s) not seen by the model:",
+          paste(setdiff(unique(newdata[[col]]), levels(col_data)), collapse = ", ")
+          ))
+      }
+      newdata[[col]] <- factor(
+        newdata[[col]],
+        levels = levels(col_data),
+        ordered = is.ordered(col_data)
+        )
     }
   }
-  colnames(X) <- object$variables_X
+
+  X <- model.matrix(object$formula, data = newdata)
+  # if first column of X corresponds to an intercept, remove it
+  if (all(X[, 1] == 1)) {
+    X <- subset(X, select = -1)
+  }
+  colnames(X) <- object$covariates_design
 
   interval <- match.arg(interval)
   preds <- predict_response(object, X, object$link, interval)

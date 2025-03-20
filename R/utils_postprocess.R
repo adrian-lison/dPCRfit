@@ -4,7 +4,7 @@ summarize_coefs <- function(res) {
     beta = as.data.table(res$fit$summary("beta"))
   ))
   # rename beta variables with the original names
-  coef_summary[, variable := c("(Intercept)", res$variables_X)]
+  coef_summary[, variable := c("(Intercept)", res$covariates_design)]
   return(coef_summary)
 }
 

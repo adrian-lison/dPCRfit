@@ -14,7 +14,7 @@
 \arguments{
 \item{object}{Object of class "dPCRfit_result"}
 
-\item{newdata}{An optional data frame in which to look for variables with
+\item{newdata}{An optional data frame in which to look for covariates with
 which to predict. If omitted, the fitted values are used.}
 
 \item{interval}{Type of interval calculation. Can be abbreviated. Currently,
