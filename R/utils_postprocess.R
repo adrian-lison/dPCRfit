@@ -4,7 +4,7 @@ summarize_coefs <- function(res) {
     beta = as.data.table(res$fit$summary("beta"))
   ))
   # rename beta variables with the original names
-  coef_summary[, variable := c("(Intercept)", res$variables)]
+  coef_summary[, variable := c("(Intercept)", res$variables_X)]
   return(coef_summary)
 }
 
@@ -21,10 +21,11 @@ summarize_residuals <- function(res) {
 }
 
 #' @importFrom posterior %**%
-predict_response <- function(res, newdata, link, interval) {
+predict_response <- function(res, X, link, interval) {
+
   alpha_draws <- posterior::as_draws_rvars(res$fit$draws("alpha"))$alpha
   beta_draws <- posterior::as_draws_rvars(res$fit$draws("beta"))$beta
-  response <- t(alpha_draws + beta_draws %**% t(newdata))[,1,drop = TRUE]
+  response <- t(alpha_draws + beta_draws %**% t(X))[,1,drop = TRUE]
 
   # apply link function
   if (link == "log") {

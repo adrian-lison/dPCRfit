@@ -72,7 +72,8 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
     formula = formula,
     link = link,
     nrow = nrow(data),
-    variables = colnames(md$X),
+    variables = all.vars(rlang::f_rhs(formula)),
+    variables_X = colnames(md$X),
     X = md$X,
     metainfo = metainfo,
     fit_opts = fit_opts
@@ -226,7 +227,7 @@ print.dPCRfit_result <- function(object, ...) {
 #' @export
 predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confidence", "prediction"), keep_data = FALSE) {
   if (missing(newdata) || is.null(newdata)) {
-    newdata <- object$X
+    X <- object$X
   } else {
     if (!(is.data.frame(newdata) || is.matrix(newdata))) {
       cli::cli_abort("newdata must be a data.frame or matrix")
@@ -234,16 +235,22 @@ predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confid
     if (!all(object$variables %in% colnames(newdata))) {
       cli::cli_abort("newdata must contain the same variables as the model was fitted on")
     }
-    newdata <- as.matrix(newdata[, object$variables])
+    newdata[[all.vars(rlang::f_lhs(object$formula))]] <- 0
+    newdata <- as.data.frame(newdata[, all.vars(object$formula)])
     if (any(duplicated(newdata))) {
       cli::cli_warn("Duplicated rows in newdata are removed.")
       newdata <- newdata[!duplicated(newdata), ]
     }
+    X <- model.matrix(object$formula, data = newdata)
+    # if first column of X corresponds to an intercept, remove it
+    if (all(X[, 1] == 1)) {
+      X <- subset(X, select = -1)
+    }
   }
-  colnames(newdata) <- object$variables
+  colnames(X) <- object$variables_X
 
   interval <- match.arg(interval)
-  preds <- predict_response(object, newdata, object$link, interval)
+  preds <- predict_response(object, X, object$link, interval)
 
   if (keep_data) {
     preds <- cbind(newdata, preds)
