@@ -38,7 +38,6 @@
 #'   options are not recommended for use in practice.
 #'
 #' @export
-#' @import data.table
 concentration_measurements <-
   function(measurements = NULL,
            id_col = "sample_id",

@@ -26,6 +26,10 @@
 #'
 #' @return An object of class "dPCRfit_result" containing the fitted model and
 #'   additional details.
+#'
+#' @import stats
+#' @import data.table
+#'
 #' @export
 dPCRfit <- function(formula, data, link = c("identity", "log"),
                     measurements = concentration_measurements(),
