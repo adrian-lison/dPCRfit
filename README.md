@@ -1,6 +1,4 @@
 
-<!-- <a href='https://adrian-lison.github.io/EpiSewer/'><img src='man/figures/EpiSewer_logo.png' align="right" width="95" alt="EpiSewer package website"/></a> -->
-
 # dPCRfit: Fit regression models to digital PCR data
 
 <!-- badges: start -->
@@ -9,6 +7,7 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 [![MIT
 license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/adrian-lison/dPCRfit/blob/main/LICENSE.md/)
+[![DOI](https://zenodo.org/badge/947279049.svg)](https://zenodo.org/badge/latestdoi/947279049)
 <!-- badges: end -->
 
 ## About
