@@ -111,7 +111,7 @@ transformed data {
 parameters {
   // Concentration regression
   real<lower=(link_type == 0 ? 0 : negative_infinity())> alpha;
-  vector<lower=(link_type == 0 ? 0 : negative_infinity())>[K] beta;
+  vector[K] beta;
 
   // Coefficient of variation of likelihood for measurements
   real<lower=0> nu_upsilon_a;
