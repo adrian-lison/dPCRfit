@@ -15,8 +15,9 @@ license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/
 The `dPCRfit` R package allows fitting regression models to gene
 concentration measurements obtained via digital PCR (dPCR). It uses a
 dPCR-specific likelihood that accounts for non-detects and
-concentration-dependent measurement error. You can specify regression
-models via a simple formula like in the base R `lm` function.
+concentration-dependent measurement error (see
+[here](https://doi.org/10.1101/2024.10.14.618307)). You can specify
+regression models via a simple formula like in the base R `lm` function.
 
 This package is useful for directly fitting regression models to dPCR
 concentration measurements, for example when partition counts are not
@@ -255,9 +256,10 @@ The dashed line shows the simulated ground truth.
 
 ``` r
 ggplot(fitted_model$coef_summary) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
   geom_point(aes(y = variable, x = median)) +
   geom_errorbar(aes(y = variable, xmin = q5, xmax = q95), width = 0.2) +
-  geom_vline(data = data.frame(variable = c("(Intercept)", "biomass"), true = c(0.2, 0.6)), aes(xintercept = true), linetype = "dashed") +
+  geom_vline(data = data.frame(variable = c("(Intercept)", "biomass"), true = c(0.2, 0.6)), aes(xintercept = true), linetype = "dotted", color = "darkred") +
   ylab("Coefficient") + xlab("Estimate") + facet_wrap(~variable, scales = "free", ncol = 1) +
   scale_x_continuous(expand = c(0.2, 0.2)) +
   theme_bw()
@@ -266,4 +268,16 @@ ggplot(fitted_model$coef_summary) +
 <img src="man/figures/README-effects_plot-1.png" width="100%" /> We see
 that the intercept was estimated with large uncertainty, due to the
 increased noise at low concentrations. In contrast, the slope of the
-linear relationship with biomass was estimated very precisely.
+linear relationship with biomass was estimated quite precisely.
+
+## Citing the package
+
+If you are using `dPCRfit` in a publication, please cite:
+
+    @article{lisonImprovingInferenceEnvironmental2025,
+      title = {Improving inference in environmental surveillance by modeling the statistical features of digital {{PCR}}},
+      author = {Lison, Adrian and Julian, Timothy and Stadler, Tanja},
+      year = {2025},
+      journal = {bioRxiv preprint},
+      doi = {10.1101/2024.10.14.618307}
+    }
