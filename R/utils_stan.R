@@ -17,7 +17,7 @@ set_fit_opts <- function(sampler = sampler_stan_mcmc(),
 
 #' Use the stan MCMC sampler
 #'
-#' @description This option will use stan's NUTS sampler via [cmdstanr] for
+#' @description This option will use stan's mcmc sampler via [cmdstanr] for
 #'   Markov Chain Monte Carlo (MCMC) sampling.
 #'
 #' @param ... Further arguments to pass to [cmdstanr].
@@ -43,6 +43,36 @@ sampler_stan_mcmc <- function(
   if (opts$threads_per_chain == 1) {
     opts$threads_per_chain <- NULL
   }
+  class(opts) <- "mcmc"
+  return(opts)
+}
+
+#' Use stan's pathfinder variational inference algorithm
+#'
+#' @description This option will use stan's pathfinder algorithm via [cmdstanr]
+#'   for variational inference. Sampling is very fast but potentially less
+#'   exact.
+#'
+#' @param ... Further arguments to pass to [cmdstanr].
+#' @inheritParams cmdstanr::pathfinder
+#'
+#' @return A `list` with settings for the pathfinder sampler.
+#' @export
+sampler_stan_pathfinder <- function(
+    draws = 4000,
+    num_paths = 4,
+    single_path_draws = NULL,
+    max_lbfgs_iters = NULL,
+    num_elbo_draws = NULL,
+    psis_resample = NULL,
+    seed = 0,
+    refresh = 2000,
+    show_messages = TRUE,
+    show_exceptions = FALSE,
+    ...
+  ) {
+  opts <- c(as.list(environment()), list(...))
+  class(opts) <- "pathfinder"
   return(opts)
 }
 
@@ -61,6 +91,83 @@ sampler_stan_mcmc <- function(
 model_stan_opts <- function(threads = FALSE, force_recompile = FALSE) {
   opts <- as.list(environment())
   return(opts)
+}
+
+#' @keywords internal
+get_pathfinder_inits <- function(stanmodel_instance, md, inits) {
+  arguments <- c(
+    list(data = md),
+    init = function() inits,
+    list(num_paths = 4, draws = 100, seed = 0)
+  )
+  return(fit_stan(
+    stanmodel_instance, arguments, fit_method = "pathfinder", silent = TRUE
+  ))
+}
+
+#' @keywords internal
+fit_stan <- function(stanmodel_instance, arguments, fit_method, silent = FALSE) {
+  if (silent) {
+    arguments$show_messages <- FALSE
+    arguments$show_exceptions <- FALSE
+    sink(tempfile(), type = "out")
+    on.exit(sink())
+  }
+  return(tryCatch(
+    {
+      fit_res <- withWarnings(suppress_messages_warnings(
+        {
+          if (fit_method == "mcmc") {
+            do.call(stanmodel_instance$sample, arguments)
+          } else if (fit_method == "pathfinder") {
+            do.call(stanmodel_instance$pathfinder, arguments)
+          } else {
+            cli::cli_abort("Unknown sampler type")
+          }
+        },
+        c(
+          "Registered S3 method overwritten by 'data.table'",
+          "Cannot parse stat file, cannot read file: No such file or directory",
+          "cannot open file '/proc/stat': No such file or directory"
+        )
+      ))
+      if (length(fit_res$warnings) == 0) {
+        fit_res <- fit_res$value
+        # ensure that data is read in
+        fit_res$draws("alpha")
+      } else {
+        if (!silent) {
+          cat("\n")
+          cli::cli_warn(
+            paste(
+              "There was an error while fitting the model.",
+              "Only the model input is returned."
+            )
+          )
+        }
+        fit_res <- list(
+          errors = unlist(lapply(
+            fit_res$warnings, function(x) stringr::str_remove(x$message, "\n")
+          )),
+          sampler_output = invisible(force(fit_res$value$output()))
+        )
+      }
+      return(fit_res)
+    },
+    error = function(err) {
+      if (!silent) {
+        cat("\n")
+        cli::cli_warn(c(
+          paste(
+            "There was an error while fitting the model.",
+            "Only the model input is returned."
+          ),
+          err$message
+        ))
+      }
+      return(list(errors = err, sampler_output = NULL))
+    }
+  ))
 }
 
 #' Compile the dPCRfit model

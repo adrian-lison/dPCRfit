@@ -66,12 +66,6 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
   ]
 
   # fit model
-  arguments <- c(
-    list(data = md),
-    init = function() inits,
-    fit_opts$sampler
-  )
-
   result <- list(
     formula = formula,
     link = link,
@@ -93,7 +87,32 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
     force_recompile = fit_opts$model$force_recompile
   )
 
-  result$fit <- fit_stan(stanmodel_instance, arguments, fit_method = "NUTS")
+  arguments <- c(
+    list(data = md),
+    init = function() inits,
+    fit_opts$sampler
+  )
+
+  # pathfinder initialization for mcmc
+  if (class(fit_opts$sampler) == "mcmc") {
+    tryCatch(
+      {
+        pathfind_init <- get_pathfinder_inits(stanmodel_instance, md, inits)
+        stopifnot(!"errors" %in% names(pathfind_init))
+        options(cmdstanr_warn_inits = FALSE)
+        arguments$init <- pathfind_init
+      },
+      error = function(e) {
+        cli::cli_warn(paste(
+          "Pathfinder initialization failed.",
+          "Falling back to default initialization."
+        ))
+      }
+    )
+  }
+
+  result$fit <- fit_stan(stanmodel_instance, arguments, fit_method = class(fit_opts$sampler))
+  options(cmdstanr_warn_inits = TRUE)
 
   if (!"errors" %in% names(result$fit)) {
     tryCatch(result$coef_summary <- summarize_coefs(result),
@@ -104,67 +123,17 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
              error = function(e) cli::cli_warn(paste(
                "Could not summarize residuals:", e$message
              )))
-    tryCatch(result$diagnostic_summary <- result$fit$diagnostic_summary(),
-             error = function(e) cli::cli_warn(paste(
-               "Could not obtain model diagnostics:", e$message
-             )))
+    if (class(fit_opts$sampler) == "mcmc") {
+      tryCatch(result$diagnostic_summary <- result$fit$diagnostic_summary(),
+               error = function(e) cli::cli_warn(paste(
+                 "Could not obtain model diagnostics:", e$message
+               )))
+    }
   }
 
   class(result) <- "dPCRfit_result"
 
   return(result)
-}
-
-fit_stan <- function(stanmodel_instance, arguments, fit_method) {
-  return(tryCatch(
-    {
-      fit_res <- withWarnings(suppress_messages_warnings(
-        {
-          if (fit_method == "NUTS") {
-            do.call(stanmodel_instance$sample, arguments)
-          } else {
-            cli::cli_abort("Unknown sampler type")
-          }
-        },
-        c(
-          "Registered S3 method overwritten by 'data.table'",
-          "Cannot parse stat file, cannot read file: No such file or directory",
-          "cannot open file '/proc/stat': No such file or directory"
-        )
-      ))
-      if (length(fit_res$warnings) == 0) {
-        fit_res <- fit_res$value
-        # ensure that data is read in
-        fit_res$draws("alpha")
-      } else {
-        cat("\n")
-        cli::cli_warn(
-          paste(
-            "There was an error while fitting the model.",
-            "Only the model input is returned."
-          )
-        )
-        fit_res <- list(
-          errors = unlist(lapply(
-            fit_res$warnings, function(x) stringr::str_remove(x$message, "\n")
-          )),
-          sampler_output = fit_res$value$output()
-        )
-      }
-      return(fit_res)
-    },
-    error = function(err) {
-      cat("\n")
-      cli::cli_warn(c(
-        paste(
-          "There was an error while fitting the model.",
-          "Only the model input is returned."
-        ),
-        err$message
-      ))
-      return(list(errors = err, sampler_output = NULL))
-    }
-  ))
 }
 
 #' Provide a summary of a dPCR Model Fit

@@ -90,6 +90,6 @@ used to display the silenced messages.}
 A \code{list} with settings for the MCMC sampler.
 }
 \description{
-This option will use stan's NUTS sampler via \link{cmdstanr} for
+This option will use stan's mcmc sampler via \link{cmdstanr} for
 Markov Chain Monte Carlo (MCMC) sampling.
 }

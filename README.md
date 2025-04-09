@@ -26,7 +26,9 @@ available.
 Information about laboratory parameters (e.g. partition volume or sample
 dilution) can be provided as priors. The package currently supports
 fixed-effect linear models (identity or log link). Models are fitted
-using `stan` through the `cmdstanr` interface.
+using `stan` through the `cmdstanr` interface, supporting exact
+estimates via MCMC sampling, or fast approximation via pathfinder
+variational inference.
 
 ## Installing the package
 
@@ -139,7 +141,7 @@ fitted_model <- dPCRfit(
         formula = concentration ~ biomass, # linear regression formula
         data = dPCR_data, # our data
         prior_intercept = c(0,1), # standard normal prior for the intercept
-        prior_coefficients = c(0,1), # standard normal prior for the regression coefficient
+        prior_coefficients = c(0,1), # standard normal prior for the regression coefficients
         measurements = concentration_measurements(
           id_col = "sample_id", # name of the column with the sample id
           replicate_col = "replicate_id", # name of the column with the biological replicate id
@@ -153,58 +155,58 @@ fitted_model <- dPCRfit(
 #> Chain 2 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 3 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 4 Iteration:    1 / 2000 [  0%]  (Warmup) 
-#> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 2 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 2 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
 #> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 2 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 3 finished in 15.5 seconds.
-#> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 4 finished in 16.7 seconds.
 #> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 1 finished in 17.6 seconds.
+#> Chain 1 finished in 8.4 seconds.
+#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 3 finished in 8.3 seconds.
+#> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 4 finished in 10.2 seconds.
 #> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 2 finished in 20.1 seconds.
+#> Chain 2 finished in 11.8 seconds.
 #> 
 #> All 4 chains finished successfully.
-#> Mean chain execution time: 17.5 seconds.
-#> Total execution time: 20.4 seconds.
+#> Mean chain execution time: 9.7 seconds.
+#> Total execution time: 11.9 seconds.
 ```
 
 ## Results
@@ -219,9 +221,9 @@ summary(fitted_model)
 #> Number of observations: 100 
 #> 
 #> Coefficients:
-#> variable     mean    median  sd       mad      q5      q95     rhat   ess_bulk  ess_tail
-#> (Intercept)  0.7032  0.6587  0.40681  0.42038  0.1247  1.4378  1.001  2779      1702    
-#> biomass      0.5938  0.5952  0.04251  0.04205  0.5213  0.6632  1.001  4229      3191    
+#> variable     mean    median  sd      mad     q5       q95     rhat   ess_bulk  ess_tail
+#> (Intercept)  0.3826  0.3029  0.3172  0.2921  0.02174  1.0142  1.002  2623      1882    
+#> biomass      0.6219  0.6224  0.0382  0.0373  0.55763  0.6853  1.001  4863      2922    
 #> 
 #> Fitted via MCMC using 4 chains with each:
 #> 1000 warm-up iterations

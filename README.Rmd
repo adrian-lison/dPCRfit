@@ -41,7 +41,8 @@ concentration measurements, for example when partition counts are not available.
 Information about laboratory parameters (e.g. partition volume or sample
 dilution) can be provided as priors. The package currently supports fixed-effect
 linear models (identity or log link). Models are fitted using `stan` through the
-`cmdstanr` interface.
+`cmdstanr` interface, supporting exact estimates via MCMC sampling, or fast
+approximation via pathfinder variational inference.
 
 ## Installing the package
 
@@ -125,7 +126,7 @@ fitted_model <- dPCRfit(
         formula = concentration ~ biomass, # linear regression formula
         data = dPCR_data, # our data
         prior_intercept = c(0,1), # standard normal prior for the intercept
-        prior_coefficients = c(0,1), # standard normal prior for the regression coefficient
+        prior_coefficients = c(0,1), # standard normal prior for the regression coefficients
         measurements = concentration_measurements(
           id_col = "sample_id", # name of the column with the sample id
           replicate_col = "replicate_id", # name of the column with the biological replicate id

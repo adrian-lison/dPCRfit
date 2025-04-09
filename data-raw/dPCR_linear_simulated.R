@@ -6,6 +6,9 @@ n_measured <- 2 # number of biological replicates
 
 alpha_true <- 0.2
 beta_true <- 0.6
+
+set.seed(0)
+
 biomass <- sample(seq(0, 28, by = 0.4), size = 50, replace = FALSE)
 
 # simulate data
