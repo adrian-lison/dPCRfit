@@ -72,7 +72,6 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
     fit_opts$sampler
   )
 
-  fitting_successful <- FALSE
   result <- list(
     formula = formula,
     link = link,
@@ -94,10 +93,39 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
     force_recompile = fit_opts$model$force_recompile
   )
 
-  fit_res <- tryCatch(
+  result$fit <- fit_stan(stanmodel_instance, arguments, fit_method = "NUTS")
+
+  if (!"errors" %in% names(result$fit)) {
+    tryCatch(result$coef_summary <- summarize_coefs(result),
+             error = function(e) cli::cli_warn(paste(
+               "Could not summarize results:", e$message
+               )))
+    tryCatch(result$residuals_summary <- summarize_residuals(result),
+             error = function(e) cli::cli_warn(paste(
+               "Could not summarize residuals:", e$message
+             )))
+    tryCatch(result$diagnostic_summary <- result$fit$diagnostic_summary(),
+             error = function(e) cli::cli_warn(paste(
+               "Could not obtain model diagnostics:", e$message
+             )))
+  }
+
+  class(result) <- "dPCRfit_result"
+
+  return(result)
+}
+
+fit_stan <- function(stanmodel_instance, arguments, fit_method) {
+  return(tryCatch(
     {
       fit_res <- withWarnings(suppress_messages_warnings(
-        do.call(stanmodel_instance$sample, arguments),
+        {
+          if (fit_method == "NUTS") {
+            do.call(stanmodel_instance$sample, arguments)
+          } else {
+            cli::cli_abort("Unknown sampler type")
+          }
+        },
         c(
           "Registered S3 method overwritten by 'data.table'",
           "Cannot parse stat file, cannot read file: No such file or directory",
@@ -105,7 +133,6 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
         )
       ))
       if (length(fit_res$warnings) == 0) {
-        fitting_successful <- TRUE
         fit_res <- fit_res$value
         # ensure that data is read in
         fit_res$draws("alpha")
@@ -124,7 +151,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
           sampler_output = fit_res$value$output()
         )
       }
-      fit_res
+      return(fit_res)
     },
     error = function(err) {
       cat("\n")
@@ -137,28 +164,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
       ))
       return(list(errors = err, sampler_output = NULL))
     }
-  )
-
-  result$fit <- fit_res
-
-  if (fitting_successful) {
-    tryCatch(result$coef_summary <- summarize_coefs(result),
-             error = function(e) cli::cli_warn(paste(
-               "Could not summarize results:", e$message
-               )))
-    tryCatch(result$residuals_summary <- summarize_residuals(result),
-             error = function(e) cli::cli_warn(paste(
-               "Could not summarize residuals:", e$message
-             )))
-    tryCatch(result$diagnostic_summary <- fit_res$diagnostic_summary(),
-             error = function(e) cli::cli_warn(paste(
-               "Could not obtain model diagnostics:", e$message
-             )))
-  }
-
-  class(result) <- "dPCRfit_result"
-
-  return(result)
+  ))
 }
 
 #' Provide a summary of a dPCR Model Fit
@@ -172,30 +178,38 @@ summary.dPCRfit_result <- function(object, ...) {
   cat("dPCRfit(formula = ", format(object$formula), ", link = ", object$link, ")\n\n", sep = "")
   cat("Number of observations:", object$nrow, "\n")
   cat("\n")
-  cat("Coefficients:\n")
-  # print object$coef_summary as character table, not notebook output
-  cat(format_table(object$coef_summary))
-  cat("\n")
-  cat("\n")
-  cat("Fitted via MCMC using ", object$fit_opts$sampler$chains, " chains with each:\n", sep = "")
-  cat(object$fit_opts$sampler$iter_warmup, " warm-up iterations", "\n", sep = "")
-  cat(object$fit_opts$sampler$iter_sampling, " sampling iterations", "\n", sep = "")
-  cat("\n")
-  cat("Diagnostics:\n")
-  num_div <- sum(object$diagnostic_summary$num_divergent)
-  if (num_div>0) {
-    cat(paste0("Divergent transitions: ", num_div, "\n"))
-  }
-  num_max_treedepth <- sum(object$diagnostic_summary$num_max_treedepth)
-  if (num_max_treedepth>0) {
-    cat(paste0("Maximum tree depth exceeded: ", num_max_treedepth, "\n"))
-  }
-  num_ebfmi <- sum(object$diagnostic_summary$num_ebfmi<0.2)
-  if (num_ebfmi>0) {
-    cat(paste0("Low EBFMI: ", num_ebfmi, " chains\n"))
-  }
-  if (num_div==0 & num_max_treedepth==0 & num_ebfmi==0) {
-    cat("No problems detected.\n")
+
+  if ("errors" %in% names(object$fit)) {
+    cat(paste(
+      "The model was not successfully fitted,",
+      "see $fit$errors and $fit$sampler_output for details."
+    ))
+  } else {
+    cat("Coefficients:\n")
+    # print object$coef_summary as character table, not notebook output
+    cat(format_table(object$coef_summary))
+    cat("\n")
+    cat("\n")
+    cat("Fitted via MCMC using ", object$fit_opts$sampler$chains, " chains with each:\n", sep = "")
+    cat(object$fit_opts$sampler$iter_warmup, " warm-up iterations", "\n", sep = "")
+    cat(object$fit_opts$sampler$iter_sampling, " sampling iterations", "\n", sep = "")
+    cat("\n")
+    cat("Diagnostics:\n")
+    num_div <- sum(object$diagnostic_summary$num_divergent)
+    if (num_div>0) {
+      cat(paste0("Divergent transitions: ", num_div, "\n"))
+    }
+    num_max_treedepth <- sum(object$diagnostic_summary$num_max_treedepth)
+    if (num_max_treedepth>0) {
+      cat(paste0("Maximum tree depth exceeded: ", num_max_treedepth, "\n"))
+    }
+    num_ebfmi <- sum(object$diagnostic_summary$num_ebfmi<0.2)
+    if (num_ebfmi>0) {
+      cat(paste0("Low EBFMI: ", num_ebfmi, " chains\n"))
+    }
+    if (num_div==0 & num_max_treedepth==0 & num_ebfmi==0) {
+      cat("No problems detected.\n")
+    }
   }
 }
 
@@ -207,8 +221,16 @@ summary.dPCRfit_result <- function(object, ...) {
 print.dPCRfit_result <- function(object, ...) {
   cat("Call:\n")
   cat("dPCRfit(formula = ", format(object$formula), ", link = ", object$link, ")\n\n", sep = "")
-  cat("Coefficients:\n")
-  cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")]))
+
+  if ("errors" %in% names(object$fit)) {
+    cat(paste(
+      "The model was not successfully fitted,",
+      "see $fit$errors and $fit$sampler_output for details."
+      ))
+  } else {
+    cat("Coefficients:\n")
+    cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")]))
+  }
 }
 
 #' Predict method for dPCR Model Fits
@@ -231,6 +253,13 @@ print.dPCRfit_result <- function(object, ...) {
 #'
 #' @export
 predict.dPCRfit_result <- function(object, newdata, interval = c("none", "confidence", "prediction"), keep_data = FALSE) {
+
+  if ("errors" %in% names(object$fit)) {
+    cli::cli_abort(paste(
+      "The model was not successfully fitted,",
+      "see $fit$errors and $fit$sampler_output for details."
+    ))
+  }
 
   if (missing(newdata) || is.null(newdata)) {
     newdata <- data.table::copy(object$covariates_df)
