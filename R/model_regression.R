@@ -76,6 +76,13 @@ linear_regression <- function(formula = NULL,
     # sort according to sample ids
     setkey(df, sample_id)
 
+    # turn character columns into factors
+    for (col in names(df)) {
+      if (is.character(df[[col]])) {
+        df[[col]] <- as.factor(df[[col]])
+      }
+    }
+
     modeldata$X <- model.matrix(formula, data = df)
 
     # if first column of X corresponds to an intercept, remove it
