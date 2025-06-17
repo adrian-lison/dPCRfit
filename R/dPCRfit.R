@@ -124,7 +124,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
                "Could not summarize residuals:", e$message
              )))
     if (class(fit_opts$sampler) == "mcmc") {
-      tryCatch(result$diagnostic_summary <- result$fit$diagnostic_summary(),
+      tryCatch(result$diagnostic_summary <- suppressMessages(result$fit$diagnostic_summary()),
                error = function(e) cli::cli_warn(paste(
                  "Could not obtain model diagnostics:", e$message
                )))
