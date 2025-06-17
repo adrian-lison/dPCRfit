@@ -97,6 +97,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
   if (class(fit_opts$sampler) == "mcmc") {
     tryCatch(
       {
+        cat("Initializing chains via pathfinder...\n")
         pathfind_init <- get_pathfinder_inits(stanmodel_instance, md, inits)
         stopifnot(!"errors" %in% names(pathfind_init))
         options(cmdstanr_warn_inits = FALSE)
