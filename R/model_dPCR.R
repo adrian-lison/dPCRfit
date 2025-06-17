@@ -266,7 +266,7 @@ noise_ <-
         modeldata$.init$nu_upsilon_b_cv <- init_from_location_scale_prior(
           modeldata$nu_upsilon_b_cv_prior
         )
-        modeldata$.init$nu_upsilon_b_noise_raw <- rep(0, modeldata$n_measured)
+        modeldata$.init$nu_upsilon_b_noise_raw <- rep(0, sum(modeldata$n_averaged))
       }
 
       modeldata$nu_upsilon_c_prior <- set_prior(
