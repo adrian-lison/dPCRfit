@@ -255,12 +255,8 @@ noise_ <-
 
       if (partitions_observe) {
         modeldata$total_partitions_observe <- TRUE
-        modeldata$max_partitions_prior <- set_prior(
-          "max_partitions", "dummy prior", mu = 0, sigma = 0
-        )
-        modeldata$partition_loss_mu_prior <- set_prior(
-          "partition_loss_mu", "dummy prior", mu = 0, sigma = 0
-        )
+        modeldata$max_partitions_prior <- numeric(0)
+        modeldata$partition_loss_mu_prior <- numeric(0)
         modeldata$partition_loss_max <- numeric(0)
         modeldata$partition_loss_sigma_prior <- numeric(0)
         modeldata$.init$max_partitions <- numeric(0)

@@ -28,8 +28,8 @@ data {
   int<lower=0, upper=2> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var
   array[2] real nu_upsilon_a_prior; // prior for pre-PCR CV
   int<lower=0, upper=1> total_partitions_observe; // 0 for not observed, 1 for observed
-  array[cv_type == 1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions, scaled by 1e+4 for numerical efficiency.
-  array[cv_type == 1 ? 2 : 0] real partition_loss_mu_prior; // prior for mean proportion of lost partitions
+  array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions, scaled by 1e+4 for numerical efficiency.
+  array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_mu_prior; // prior for mean proportion of lost partitions
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_sigma_prior; // prior for variation of the partition loss proportion (logit-level)
   array[cv_type == 1 && total_partitions_observe!=1 ? 1 : 0] real partition_loss_max; // threshold for proportion of lost partitions
   array[cv_type == 1 ? 2 : 0] real nu_upsilon_c_prior; // prior for parameter 3 of CV formula (partition size*(scaling factor, i.e. exp_conc_assay/exp_conc_ww)). Scaled by 1e+5 for numerical efficiency.
@@ -127,7 +127,7 @@ parameters {
 
   // Coefficient of variation of likelihood for measurements
   real<lower=0> nu_upsilon_a; // pre-PCR coefficient of variation
-  array[(cv_type == 1) && (max_partitions_prior[2] > 0) ? 1 : 0] real<lower=0> max_partitions; // maximum number of partitions of dPCR system
+  array[(cv_type == 1) && total_partitions_observe!=1 && (max_partitions_prior[2] > 0) ? 1 : 0] real<lower=0> max_partitions; // maximum number of partitions of dPCR system
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_mu_prior[2] > 0) ? 1 : 0] real partition_loss_mu; // mean proportion of lost partitions
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_sigma_prior[2] > 0) ? 1 : 0] real<lower=0> partition_loss_sigma; // logit-level standard deviation of proportion of lost partitions
   vector[(cv_type == 1) && total_partitions_observe!=1 ? sum(n_averaged) : 0] partition_loss_raw; // non-centered partition loss noise
@@ -148,7 +148,9 @@ transformed parameters {
   concentration = true_concentration[measure_to_sample];
 
   if (cv_type == 1) {
-    if (total_partitions_observe!=1) {
+    if (total_partitions_observe) {
+      nu_upsilon_b = dPCR_total_partitions .* to_vector(n_averaged);
+    } else {
       nu_upsilon_b = 1e4 * sum_partial_vector_n(
         param_or_fixed(max_partitions, max_partitions_prior) *
         (1 - partition_loss_max[1] * inv_logit(
@@ -157,8 +159,6 @@ transformed parameters {
           partition_loss_raw
           )), n_averaged
         );
-    } else {
-      nu_upsilon_b = dPCR_total_partitions .* to_vector(n_averaged);
     }
   }
 
@@ -231,13 +231,15 @@ model {
   // Prior on cv of likelihood for measurements
   nu_upsilon_a ~ normal(nu_upsilon_a_prior[1], nu_upsilon_a_prior[2]) T[0, ]; // truncated normal
   if (cv_type == 1) {
-    target += normal_prior_lb_lpdf(max_partitions | max_partitions_prior, 0); // truncated normal
-    target += normal_prior_lpdf(partition_loss_mu | partition_loss_mu_prior); // normal
-    target += normal_prior_lb_lpdf(nu_upsilon_c | nu_upsilon_c_prior, 0); // truncated normal
+    // partition number prior
     if (total_partitions_observe != 1) {
+      target += normal_prior_lb_lpdf(max_partitions | max_partitions_prior, 0); // truncated normal
+      target += normal_prior_lpdf(partition_loss_mu | partition_loss_mu_prior); // normal
       target += normal_prior_lb_lpdf(partition_loss_sigma | partition_loss_sigma_prior, 0); // truncated normal
       partition_loss_raw ~ std_normal(); // non-centered noise
     }
+    // conversion factor prior
+    target += normal_prior_lb_lpdf(nu_upsilon_c | nu_upsilon_c_prior, 0); // truncated normal
   }
 
   // Likelihood
@@ -286,7 +288,7 @@ generated quantities {
   {
     vector[n_samples] nu_upsilon_b_all;
     if (cv_type == 1) {
-      if (total_partitions_observe == 1) {
+      if (total_partitions_observe) {
         nu_upsilon_b_all = total_partitions_all .* to_vector(n_averaged_all);
       } else {
         vector[sum(n_averaged_all)] partition_loss_all = partition_loss_max[1] *
