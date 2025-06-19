@@ -122,7 +122,7 @@ concentration_measurements <-
           measurements[["total_partitions"]]
         )
       } else {
-        modeldata$dPCR_total_partitions <- rep(0, modeldata$n_measured)
+        modeldata$dPCR_total_partitions <- numeric(0)
       }
 
       # distribution of non-zero measurements
@@ -237,6 +237,7 @@ noise_ <-
 
     if (cv_type == "constant_cv") {
       modeldata$total_partitions_observe <- FALSE
+      modeldata$dPCR_total_partitions <- numeric(0)
       modeldata$cv_type <- 0
       modeldata$max_partitions_prior <- numeric(0)
       modeldata$partition_loss_mu_prior <- numeric(0)
@@ -264,11 +265,11 @@ noise_ <-
         modeldata$.init$partition_loss_sigma <- numeric(0)
         modeldata$.init$partition_loss_raw <- numeric(0)
         modeldata$.checks$check_total_partitions_col <- function(md, ...) {
-          if (!"dPCR_total_partitions" %in% names(md)) {
+          if (length(md$dPCR_total_partitions)==0) {
             cli::cli_abort(paste0(
               "You specified `partitions_observe = TRUE`, which requires ",
               "a column with the number of total partitions in the PCR for ",
-              "each sample in your data. Please specify such a column via the",
+              "each sample in your data. Please specify such a column via the ",
               "`total_partitions_col` argument in ",
               cli_help("concentrations_observe"), "."
             ))
@@ -276,6 +277,14 @@ noise_ <-
         }
       } else {
         modeldata$total_partitions_observe <- FALSE
+        if (length(modeldata$dPCR_total_partitions) > 0) {
+          cli::cli_inform(c("i" = paste0(
+            "Note: Your data contains a column with the number of total ",
+            "partitions in the dPCR."), "!" = paste0("However, you specified ",
+            "partitions_observe = FALSE, so this column is currently ignored."
+          )))
+        modeldata$dPCR_total_partitions <- numeric(0)
+        }
 
         # maximum number of partitions
         modeldata$max_partitions_prior <- set_prior_trunc_normal(
@@ -338,6 +347,7 @@ noise_ <-
 
     } else if (cv_type == "constant_var") {
       modeldata$total_partitions_observe <- FALSE
+      modeldata$dPCR_total_partitions <- numeric(0)
       modeldata$cv_type <- 2
       modeldata$max_partitions_prior <- numeric(0)
       modeldata$partition_loss_mu_prior <- numeric(0)
@@ -554,8 +564,8 @@ nondetect_dPCR <- function(drop_prob = 1e-10) {
 
     if (is.null(modeldata$cv_type) || modeldata$cv_type != 1) {
       cli::cli_abort(paste0(
-        "To use ",
-        cli_help("nondetect_dPCR"), ", you must also use ",
+        "To use nondetect = ",
+        cli_help("nondetect_dPCR"), ", you must specify noise = ",
         cli_help("noise_dPCR"), "."
       ))
     }

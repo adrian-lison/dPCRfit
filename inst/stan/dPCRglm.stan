@@ -14,7 +14,6 @@ data {
   array[n_measured] int<lower=1, upper=n_samples> measure_to_sample; // index mapping measurements to samples
   vector<lower=0>[n_measured] measured_concentrations; // measured concentrations
   array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement (is vector for vectorization)
-  vector<lower=0>[n_measured] dPCR_total_partitions; // total number of partitions in dPCR
   int<lower=0, upper=3> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal
 
   // Concentration ----
@@ -28,6 +27,7 @@ data {
   int<lower=0, upper=2> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var
   array[2] real nu_upsilon_a_prior; // prior for pre-PCR CV
   int<lower=0, upper=1> total_partitions_observe; // 0 for not observed, 1 for observed
+  vector<lower=0>[cv_type == 1 && total_partitions_observe ? n_measured : 0] dPCR_total_partitions; // total number of partitions in dPCR
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions, scaled by 1e+4 for numerical efficiency.
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_mu_prior; // prior for mean proportion of lost partitions
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_sigma_prior; // prior for variation of the partition loss proportion (logit-level)
@@ -56,12 +56,16 @@ transformed data {
   }
 
   // number of total partitions per measurement per date
-  real total_partitions_median = quantile(dPCR_total_partitions, 0.5);
-  vector[n_samples] total_partitions_all = rep_vector(total_partitions_median, n_samples);
-  for (i in 1:n_measured) {
-    // note that if several measurements per sample exist,
-    // the total partitions of the last one will be used for that date
-    total_partitions_all[measure_to_sample[i]] = dPCR_total_partitions[i];
+  vector[n_samples] total_partitions_all;
+  real total_partitions_median;
+  if (total_partitions_observe) {
+    total_partitions_median = quantile(dPCR_total_partitions, 0.5);
+    total_partitions_all = rep_vector(total_partitions_median, n_samples);
+    for (i in 1:n_measured) {
+      // note that if several measurements per sample exist,
+      // the total partitions of the last one will be used for that date
+      total_partitions_all[measure_to_sample[i]] = dPCR_total_partitions[i];
+    }
   }
 
   // Upper relevant bound for LOD model

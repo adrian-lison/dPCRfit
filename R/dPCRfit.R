@@ -54,6 +54,11 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
       beta_prior = prior_coefficients
     )
 
+  # run checks
+  for (check in md$.checks) {
+    check(md, data)
+  }
+
   # prepare model data
   inits <- md$.init
   metainfo <- md$.metainfo
