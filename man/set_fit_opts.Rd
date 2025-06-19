@@ -8,7 +8,8 @@ set_fit_opts(sampler = sampler_stan_mcmc(), model = model_stan_opts())
 }
 \arguments{
 \item{sampler}{Which type of sampler should be used for model fitting?
-Currently, only \code{\link[=sampler_stan_mcmc]{sampler_stan_mcmc()}} is supported.}
+Currently, \code{\link[=sampler_stan_mcmc]{sampler_stan_mcmc()}} is recommended. For fast but less accurate
+estimation, \code{\link[=sampler_stan_pathfinder]{sampler_stan_pathfinder()}} can be used.}
 
 \item{model}{Details about the model file to be used, see
 \code{\link[=model_stan_opts]{model_stan_opts()}}.}
