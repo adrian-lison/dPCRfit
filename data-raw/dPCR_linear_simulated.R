@@ -1,7 +1,7 @@
 library(data.table)
 
 # simulation parameters
-n_replicates <- 1 # number of technical replicates
+n_replicates <- 2 # number of technical replicates
 n_measured <- 2 # number of biological replicates
 
 alpha_true <- 0.2
@@ -40,9 +40,13 @@ dPCR_linear_simulated <- cbind(meta_df, measurements_df) |>
     variable.name = "replicate_id",
     value.name = "concentration"
     )
+dPCR_linear_simulated[, n_technical_reps := n_replicates]
 
 # reorder columns, sample_id and replicate_id first
-setcolorder(dPCR_linear_simulated, c("sample_id", "replicate_id", "biomass", "lambda", "concentration"))
+setcolorder(dPCR_linear_simulated, c(
+  "sample_id", "replicate_id", "biomass",
+  "lambda", "n_technical_reps", "concentration"
+  ))
 
 # oder by sample_id and replicate_id
 setorderv(dPCR_linear_simulated, c("sample_id", "replicate_id"))
