@@ -106,7 +106,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
         pathfind_init <- get_pathfinder_inits(stanmodel_instance, md, inits)
         stopifnot(!"errors" %in% names(pathfind_init))
         options(cmdstanr_warn_inits = FALSE)
-        arguments$init <- pathfind_init
+        arguments$init <- pathfind_init$draws()
       },
       error = function(e) {
         cli::cli_warn(paste(
