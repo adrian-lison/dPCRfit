@@ -484,7 +484,7 @@ noise_dPCR <-
            partition_loss_mean_prior_lower = 0.01,
            partition_loss_mean_prior_upper = 0.3,
            partition_loss_variation_prior_lower = 0.1,
-           partition_loss_variation_prior_upper = 0.5,
+           partition_loss_variation_prior_upper = 1,
            partition_loss_max = 0.5,
            volume_scaled_prior_mu = 1e-5,
            volume_scaled_prior_sigma = 4e-5,
