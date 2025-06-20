@@ -170,7 +170,10 @@ concentration_measurements <-
 #'   relative partition loss. A certain proportion of partitions in a dPCR run
 #'   is typically invalid and discarded from the concentration estimate. This
 #'   prior can be used to set a lower and upper bound for the mean proportion of
-#'   partitions lost.
+#'   partitions lost. Note that for proportions close to 0 or to
+#'   `partition_loss_max` (see below), the resulting mean partition loss can
+#'   slightly differ from what is specified here, because we internally
+#'   translate this prior to the logit scale.
 #' @param partition_loss_mean_prior_upper Prior (95% quantile) for the mean
 #'   relative partition loss (see `partition_loss_mean_prior_lower` for
 #'   details). In well-functioning dPCR assays, the mean proportion of lost
