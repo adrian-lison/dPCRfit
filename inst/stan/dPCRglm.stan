@@ -106,14 +106,21 @@ transformed data {
     conc_drop_prob = -log(LOD_drop_prob)/LOD_expected_scale; // concentrations above this value are irrelevant for LOD model (probability of non-detection is virtually zero)
   }
 
+  int n_zero;
+  int n_dropLOD;
+  if (obs_dist != 4) {
+    n_zero  = num_zeros(measured_concentrations);
+    n_dropLOD = num_zeros(fmax(0, conc_drop_prob - measured_concentrations));
+  } else {
+    n_zero  = num_zeros(positive_partitions);
+    n_dropLOD = 0;
+  }
 
-  int n_zero = num_zeros(measured_concentrations);
-  int n_dropLOD = num_zeros(fmax(0, conc_drop_prob - measured_concentrations));
-  array[n_zero] int<lower=0> i_zero;
-  array[n_measured - n_zero] int<lower=0> i_nonzero = rep_array(0, n_measured - n_zero);
-  array[n_measured - n_dropLOD] int<lower=0> i_LOD = rep_array(0, n_measured - n_dropLOD);
-  array[n_measured - n_zero - n_dropLOD] int<lower=0> i_nonzero_LOD = rep_array(0, n_measured - n_zero - n_dropLOD);
-  if (LOD_model > 0) {
+  array[n_zero] int i_zero;
+  array[n_measured - n_zero] int i_nonzero;
+  array[n_measured - n_dropLOD] int i_LOD;
+  array[n_measured - n_zero - n_dropLOD] int i_nonzero_LOD;
+  if (obs_dist != 4) {
     int i_z = 0;
     int i_nz = 0;
     int i_lod = 0;
