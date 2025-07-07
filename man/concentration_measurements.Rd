@@ -26,41 +26,38 @@ concentration measurements.}
 concentrations.}
 
 \item{replicate_col}{Name of the column containing the replicate ID of each
-measurement. This is used to identify multiple measurements made of a
-sample from the same date. Should be \code{NULL} if only one measurement per
-sample was made.}
+measurement. This is used to identify multiple measurements (biological
+replicates) of the same sample. Should be \code{NULL} if only one biological
+replicate per sample was made.}
 
-\item{n_averaged}{The number of replicates over which the measurements have
-been averaged. This is typically used as an alternative to providing
-several replicates per sample (i.e. the concentration provided in the
-\code{measurements} \code{data.frame} is the average of several replicates).
-Can be either a single number (it is then assumed that the number of
-averaged replicates is the same for each observation) or a vector (one
-value for each observation).}
+\item{n_averaged}{The number of technical replicates (i.e. repeated PCR runs)
+used for each biological replicate. The concentration provided in the
+\code{measurements} \code{data.frame} is assumed to be the average or pooled estimate
+from several technical replicates. Can be either a single number (it is
+then assumed that the number of averaged replicates is the same for each
+observation) or a vector (one value for each observation).}
 
 \item{n_averaged_col}{Name of the column in the \code{measurements} data.frame
-containing the number of replicates over which the measurements have been
-averaged. This is an alternative to specifying \code{n_averaged}.}
+containing the number of technical replicates over which the measurements
+have been averaged/pooled. This is an alternative to specifying
+\code{n_averaged}.}
 
 \item{total_partitions_col}{Name of the column in the \code{measurements}
-data.frame containing the total number of partitions (e.g. droplets for
-ddPCR) in the dPCR reaction of each measurement. Only applies to
-concentration measurements obtain via dPCR. Can be used by the
-\code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}} and \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} modeling components. Note
-that this is really the
-\emph{total} number of partitions, not just the number of positive partitions.}
+data.frame containing the number of total partitions (e.g. droplets for
+ddPCR) in the dPCR reaction of each measurement. If several technical
+replicates are used, this should be the average number of valid partitions
+per replicate. Only applies when modeling concentration measurements via
+the dPCR-specific noise model. Can be used by the \code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}}
+and \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} modeling components. Note that this is really the
+number of \emph{valid} partitions, not the number of positive partitions.}
 
 \item{distribution}{Parametric distribution for concentration measurements.
 Currently supported are "gamma" (default and recommended), "log-normal",
 "truncated normal", and "normal". The "truncated normal" and "normal"
 options are not recommended for use in practice.}
-
-\item{composite_window}{Over how many days has each measured sample been
-collected? If 1 (default), samples represent single days. If larger than 1,
-samples are assumed to be equivolumetric composites over several dates. In
-this case, the supplied dates represent the last day included in each
-sample.}
 }
 \description{
-Model concentration measurements
+This option models concentration measurements from digital PCR
+and can be used in settings where the numbers of total and positive
+partitions are unknown, i.e. only the measured concentrations are provided.
 }

@@ -12,9 +12,10 @@ data {
   int<lower=0> n_samples; // number of different samples
   int<lower=0> n_measured; // number of all measurements
   array[n_measured] int<lower=1, upper=n_samples> measure_to_sample; // index mapping measurements to samples
-  vector<lower=0>[n_measured] measured_concentrations; // measured concentrations
   array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement (is vector for vectorization)
-  int<lower=0, upper=3> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal
+  int<lower=0, upper=4> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal, 4 for binomial (partition counts)
+  vector<lower=0>[obs_dist != 4 ? n_measured : 0] measured_concentrations; // measured concentrations
+  array[obs_dist == 4 ? n_measured : 0] int<lower=0> positive_partitions; // number of positive partitions (binomial model)
 
   // Concentration ----
   array[2] real alpha_prior; // prior for intercept of concentration
@@ -24,17 +25,17 @@ data {
   int <lower=0, upper=1> link_type; // 0 for identity, 1 for log-link
 
   // Coefficient of variation (CV) of measurements ----
-  int<lower=0, upper=2> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var
+  int<lower=0, upper=3> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var
   array[2] real nu_upsilon_a_prior; // prior for pre-PCR CV
   int<lower=0, upper=1> total_partitions_observe; // 0 for not observed, 1 for observed
-  vector<lower=0>[cv_type == 1 && total_partitions_observe ? n_measured : 0] dPCR_total_partitions; // total number of partitions in dPCR
+  vector<lower=0>[(cv_type == 1 || cv_type == 3) && total_partitions_observe ? n_measured : 0] dPCR_total_partitions; // total number of partitions in dPCR
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions, scaled by 1e+4 for numerical efficiency.
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_mu_prior; // prior for mean proportion of lost partitions
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_sigma_prior; // prior for variation of the partition loss proportion (logit-level)
   array[cv_type == 1 && total_partitions_observe!=1 ? 1 : 0] real partition_loss_max; // threshold for proportion of lost partitions
-  array[cv_type == 1 ? 2 : 0] real nu_upsilon_c_prior; // prior for parameter 3 of CV formula (partition size*(scaling factor, i.e. exp_conc_assay/exp_conc_ww)). Scaled by 1e+5 for numerical efficiency.
-  array[cv_type == 1 ? 1 : 0] int <lower=0, upper=1> cv_pre_type; // 0 for gamma, 1 for log-normal
-  array[cv_type == 1 ? 1 : 0] int <lower=0, upper=1> cv_pre_approx_taylor; // 0 for no Taylor expansion approximation, 1 for Taylor expansion approximation
+  array[cv_type == 1 || cv_type == 3 ? 2 : 0] real nu_upsilon_c_prior; // prior for parameter 3 of CV formula (partition size*(scaling factor, i.e. exp_conc_assay/exp_conc_ww)). Scaled by 1e+5 for numerical efficiency.
+  array[cv_type == 1 || cv_type == 3 ? 1 : 0] int <lower=0, upper=1> cv_pre_type; // 0 for gamma, 1 for log-normal
+  array[cv_type == 1 || cv_type == 3 ? 1 : 0] int <lower=0, upper=1> cv_pre_approx_taylor; // 0 for no Taylor expansion approximation, 1 for Taylor expansion approximation
 
   // Limit of detection ----
   // LOD_model = 0: no LOD
@@ -67,6 +68,15 @@ transformed data {
       total_partitions_all[measure_to_sample[i]] = dPCR_total_partitions[i];
     }
   }
+  array[obs_dist == 4 ? n_measured : 0] int<lower=0> positive_partitions_sum_int;
+  array[obs_dist == 4 ? n_measured : 0] int<lower=0> total_partitions_sum_int;
+  if (obs_dist == 4) {
+     for (i in 1:n_measured) {
+       positive_partitions_sum_int[i] = to_int(positive_partitions[i] * n_averaged[i]);
+       total_partitions_sum_int[i] = to_int(dPCR_total_partitions[i] * n_averaged[i]);
+     }
+  }
+
 
   // Upper relevant bound for LOD model
   real conc_drop_prob;
@@ -96,31 +106,34 @@ transformed data {
     conc_drop_prob = -log(LOD_drop_prob)/LOD_expected_scale; // concentrations above this value are irrelevant for LOD model (probability of non-detection is virtually zero)
   }
 
+
   int n_zero = num_zeros(measured_concentrations);
   int n_dropLOD = num_zeros(fmax(0, conc_drop_prob - measured_concentrations));
   array[n_zero] int<lower=0> i_zero;
-  array[n_measured - n_zero] int<lower=0> i_nonzero;
-  array[n_measured - n_dropLOD] int<lower=0> i_LOD;
-  array[n_measured - n_zero - n_dropLOD] int<lower=0> i_nonzero_LOD;
-  int i_z = 0;
-  int i_nz = 0;
-  int i_lod = 0;
-  int i_nzs = 0;
-  for (n in 1:n_measured) {
-    if (measured_concentrations[n] == 0) {
-      i_z += 1;
-      i_zero[i_z] = n;
-    } else {
-      i_nz += 1;
-      i_nonzero[i_nz] = n;
-      if (measured_concentrations[n] < conc_drop_prob) {
-        i_nzs += 1;
-        i_nonzero_LOD[i_nzs] = n;
+  array[n_measured - n_zero] int<lower=0> i_nonzero = rep_array(0, n_measured - n_zero);
+  array[n_measured - n_dropLOD] int<lower=0> i_LOD = rep_array(0, n_measured - n_dropLOD);
+  array[n_measured - n_zero - n_dropLOD] int<lower=0> i_nonzero_LOD = rep_array(0, n_measured - n_zero - n_dropLOD);
+  if (LOD_model > 0) {
+    int i_z = 0;
+    int i_nz = 0;
+    int i_lod = 0;
+    int i_nzs = 0;
+    for (n in 1:n_measured) {
+      if (measured_concentrations[n] == 0) {
+        i_z += 1;
+        i_zero[i_z] = n;
+      } else {
+        i_nz += 1;
+        i_nonzero[i_nz] = n;
+        if (measured_concentrations[n] < conc_drop_prob) {
+          i_nzs += 1;
+          i_nonzero_LOD[i_nzs] = n;
+        }
       }
-    }
-    if (measured_concentrations[n] < conc_drop_prob) {
-        i_lod += 1;
-        i_LOD[i_lod] = n;
+      if (measured_concentrations[n] < conc_drop_prob) {
+          i_lod += 1;
+          i_LOD[i_lod] = n;
+      }
     }
   }
 }
@@ -135,7 +148,8 @@ parameters {
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_mu_prior[2] > 0) ? 1 : 0] real partition_loss_mu; // mean proportion of lost partitions
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_sigma_prior[2] > 0) ? 1 : 0] real<lower=0> partition_loss_sigma; // logit-level standard deviation of proportion of lost partitions
   vector[(cv_type == 1) && total_partitions_observe!=1 ? sum(n_averaged) : 0] partition_loss_raw; // non-centered partition loss noise
-  array[(cv_type == 1) && nu_upsilon_c_prior[2] > 0 ? 1 : 0] real<lower=0> nu_upsilon_c; // conversion factor (scaled partition volume)
+  array[(cv_type == 1 || cv_type == 3) && nu_upsilon_c_prior[2] > 0 ? 1 : 0] real<lower=0> nu_upsilon_c; // conversion factor (scaled partition volume)
+  vector[cv_type == 3 ? n_measured : 0] concentration_with_noise_raw;
 }
 transformed parameters {
   vector<lower=0>[n_samples] true_concentration;
@@ -144,6 +158,10 @@ transformed parameters {
   vector[n_measured] concentration;
   vector[n_measured] p_zero_log = rep_vector(negative_infinity(), n_measured);
   vector[n_measured] p_zero = rep_vector(0, n_measured);
+  vector[cv_type != 3 ? n_measured : 0] cv;
+  vector[cv_type != 3 ? n_measured - n_zero : 0] mean_conditional;
+  vector[cv_type != 3 ? n_measured - n_zero : 0] cv_conditional;
+  vector<lower=0>[cv_type == 3 ? n_measured : 0] concentration_with_noise;
 
   true_concentration = alpha + X * beta;
   if (link_type == 1) {
@@ -166,6 +184,7 @@ transformed parameters {
     }
   }
 
+ // probability of non-detection
  if (LOD_model > 0) {
     if (LOD_model == 1) {
       LOD_hurdle_scale[1] = rep_vector(LOD_scale[1], n_measured);
@@ -184,8 +203,7 @@ transformed parameters {
     p_zero = exp(p_zero_log);
   }
 
-    // CV of each observation as a function of concentration
-  vector[n_measured] cv;
+  // CV of each observation as a function of concentration
   if (cv_type == 0) { // constant cv
     cv = rep_vector(nu_upsilon_a, n_measured);
   } else if (cv_type == 1) { // dPCR
@@ -199,26 +217,32 @@ transformed parameters {
       );
   } else if (cv_type == 2) { // constant variance
     cv = (nu_upsilon_a * mean(measured_concentrations) / concentration);
+  } else if (cv_type == 3) {
+    concentration_with_noise = lognormal5_noncentered(
+      concentration, nu_upsilon_a, concentration_with_noise_raw
+      );
   }
 
-  vector[n_measured - n_zero] mean_conditional = concentration[i_nonzero] ./ (1-p_zero[i_nonzero]);
-  vector[n_measured - n_zero] cv_conditional = sqrt(trim_or_reject_lb(
-      cv[i_nonzero]^2 .* (1-p_zero[i_nonzero]) - p_zero[i_nonzero],
-      1e-5, // trim to almost zero
-      -1 // throw error when significantly below zero
-    ));
-  if (is_nan(sum(cv_conditional))) {
-    for (i in 1:num_elements(cv_conditional)) {
-      if (is_nan(cv_conditional[i])) {
-        print("i:", i);
-        print("p_zero: ", p_zero[i_nonzero][i]);
-        print("concentration: ", concentration[i_nonzero][i]);
-        print("CV: ", cv[i_nonzero][i]);
-        print("alpha", alpha);
-        print("beta", beta);
-        print("nu_upsilon_a: ", nu_upsilon_a);
-        print("nu_upsilon_b: ", nu_upsilon_b);
-        print("nu_upsilon_c: ", param_or_fixed(nu_upsilon_c, nu_upsilon_c_prior) * 1e-5);
+  if (cv_type != 3) {
+    mean_conditional = concentration[i_nonzero] ./ (1-p_zero[i_nonzero]);
+    cv_conditional = sqrt(trim_or_reject_lb(
+        cv[i_nonzero]^2 .* (1-p_zero[i_nonzero]) - p_zero[i_nonzero],
+        1e-5, // trim to almost zero
+        -1 // throw error when significantly below zero
+      ));
+    if (is_nan(sum(cv_conditional))) {
+      for (i in 1:num_elements(cv_conditional)) {
+        if (is_nan(cv_conditional[i])) {
+          print("i:", i);
+          print("p_zero: ", p_zero[i_nonzero][i]);
+          print("concentration: ", concentration[i_nonzero][i]);
+          print("CV: ", cv[i_nonzero][i]);
+          print("alpha", alpha);
+          print("beta", beta);
+          print("nu_upsilon_a: ", nu_upsilon_a);
+          print("nu_upsilon_b: ", nu_upsilon_b);
+          print("nu_upsilon_c: ", param_or_fixed(nu_upsilon_c, nu_upsilon_c_prior) * 1e-5);
+        }
       }
     }
   }
@@ -242,6 +266,8 @@ model {
       target += normal_prior_lb_lpdf(partition_loss_sigma | partition_loss_sigma_prior, 0); // truncated normal
       partition_loss_raw ~ std_normal(); // non-centered noise
     }
+  }
+  if (cv_type == 1 || cv_type == 3) {
     // conversion factor prior
     target += normal_prior_lb_lpdf(nu_upsilon_c | nu_upsilon_c_prior, 0); // truncated normal
   }
@@ -280,16 +306,34 @@ model {
         concentration, // expectation
         cv // coefficient of variation
       );
+    } else if (obs_dist == 4) {
+      concentration_with_noise_raw ~ std_normal(); // non-centered noise
+      target += binomial_lupmf(
+        positive_partitions_sum_int |
+        total_partitions_sum_int, // total valid partitions
+        1 - exp(-concentration_with_noise * param_or_fixed(nu_upsilon_c, nu_upsilon_c_prior) * 1e-5) // expected value
+      );
     } else {
       reject("Distribution not supported.");
     }
   }
 }
 generated quantities {
-  vector[n_measured] predicted_concentration;
+  vector[obs_dist != 4 ? n_measured : 0] predicted_concentration;
+  vector<lower=0>[obs_dist == 4 ? n_measured : 0] predicted_positive_partitions;
   vector[n_measured] residuals;
 
-  {
+  if (obs_dist == 4) {
+    array[n_measured] int ppp_int;
+    ppp_int = binomial_rng(
+      total_partitions_sum_int, // total valid partitions
+      1 - exp(-concentration_with_noise * param_or_fixed(nu_upsilon_c, nu_upsilon_c_prior) * 1e-5) // expected value
+    );
+    for (i in 1:n_measured) {
+      predicted_positive_partitions[i] = ppp_int[i];
+      residuals[i] = positive_partitions[i] - predicted_positive_partitions[i];
+    }
+  } else {
     vector[n_samples] nu_upsilon_b_all;
     if (cv_type == 1) {
       if (total_partitions_observe) {
@@ -384,6 +428,6 @@ generated quantities {
       reject("Distribution not supported.");
     }
     predicted_concentration = isnonzero .* meas_conc;
-    residuals = predicted_concentration - measured_concentrations;
+    residuals = measured_concentrations - predicted_concentration;
   }
 }

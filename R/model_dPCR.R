@@ -1,37 +1,37 @@
 #' Model concentration measurements
 #'
+#' @description This option models concentration measurements from digital PCR
+#'   and can be used in settings where the numbers of total and positive
+#'   partitions are unknown, i.e. only the measured concentrations are provided.
+#'
 #' @param measurements A `data.frame` with each row representing one dPCR
 #'   measurement. Must have at least a column with sample ids and a column with
 #'   concentration measurements.
-#' @param composite_window Over how many days has each measured sample been
-#'   collected? If 1 (default), samples represent single days. If larger than 1,
-#'   samples are assumed to be equivolumetric composites over several dates. In
-#'   this case, the supplied dates represent the last day included in each
-#'   sample.
 #' @param id_col Name of the column containing the id of the sample.
 #' @param concentration_col Name of the column containing the measured
 #'   concentrations.
 #' @param replicate_col Name of the column containing the replicate ID of each
-#'   measurement. This is used to identify multiple measurements made of a
-#'   sample from the same date. Should be `NULL` if only one measurement per
-#'   sample was made.
-#' @param n_averaged The number of replicates over which the measurements have
-#'   been averaged. This is typically used as an alternative to providing
-#'   several replicates per sample (i.e. the concentration provided in the
-#'   `measurements` `data.frame` is the average of several replicates).
-#'   Can be either a single number (it is then assumed that the number of
-#'   averaged replicates is the same for each observation) or a vector (one
-#'   value for each observation).
+#'   measurement. This is used to identify multiple measurements (biological
+#'   replicates) of the same sample. Should be `NULL` if only one biological
+#'   replicate per sample was made.
+#' @param n_averaged The number of technical replicates (i.e. repeated PCR runs)
+#'   used for each biological replicate. The concentration provided in the
+#'   `measurements` `data.frame` is assumed to be the average or pooled estimate
+#'   from several technical replicates. Can be either a single number (it is
+#'   then assumed that the number of averaged replicates is the same for each
+#'   observation) or a vector (one value for each observation).
 #' @param n_averaged_col Name of the column in the `measurements` data.frame
-#'   containing the number of replicates over which the measurements have been
-#'   averaged. This is an alternative to specifying `n_averaged`.
+#'   containing the number of technical replicates over which the measurements
+#'   have been averaged/pooled. This is an alternative to specifying
+#'   `n_averaged`.
 #' @param total_partitions_col Name of the column in the `measurements`
-#'   data.frame containing the total number of partitions (e.g. droplets for
-#'   ddPCR) in the dPCR reaction of each measurement. Only applies to
-#'   concentration measurements obtain via dPCR. Can be used by the
-#'   [noise_estimate_dPCR()] and [LOD_estimate_dPCR()] modeling components. Note
-#'   that this is really the
-#'   *total* number of partitions, not just the number of positive partitions.
+#'   data.frame containing the number of total partitions (e.g. droplets for
+#'   ddPCR) in the dPCR reaction of each measurement. If several technical
+#'   replicates are used, this should be the average number of valid partitions
+#'   per replicate. Only applies when modeling concentration measurements via
+#'   the dPCR-specific noise model. Can be used by the [noise_estimate_dPCR()]
+#'   and [LOD_estimate_dPCR()] modeling components. Note that this is really the
+#'   number of *valid* partitions, not the number of positive partitions.
 #' @param distribution Parametric distribution for concentration measurements.
 #'   Currently supported are "gamma" (default and recommended), "log-normal",
 #'   "truncated normal", and "normal". The "truncated normal" and "normal"
@@ -97,7 +97,7 @@ concentration_measurements <-
       }
 
       # number of averaged technical replicates
-      if (!is.null(n_averaged_col)){
+      if (!is.null(n_averaged_col)) {
         modeldata$n_averaged <- as.numeric(measurements[["n_averaged"]])
         if (any(is.na(modeldata$n_averaged))) {
           cli::cli_abort(paste0(
@@ -128,9 +128,149 @@ concentration_measurements <-
       # distribution of non-zero measurements
       modeldata$obs_dist = set_distribution(distribution)
 
+      modeldata$positive_partitions <- numeric(0)
+      modeldata$.init$concentration_with_noise_raw <- numeric(0)
+
       return(modeldata)
     })
   }
+
+#' Model the number of positive partitions in a dPCR assay
+#'
+#' @description This option will fit a binomial regression model to the number
+#'   of positive partitions in a dPCR assay.
+#'
+#' @param measurements A `data.frame` with each row representing one dPCR
+#'   measurement. Must have at least a column with sample ids and columns for
+#'   the numbers of total and positive partitions.
+#' @param id_col Name of the column containing the id of the sample.
+#' @param replicate_col Name of the column containing the replicate ID of each
+#'   measurement. This is used to identify multiple measurements (biological
+#'   replicates) of the same sample. Should be `NULL` if only one biological
+#'   replicate per sample was made.
+#' @param positive_partitions_col Name of the column in the `measurements`
+#'   data.frame containing the number of positive partitions (e.g. positive
+#'   droplets for ddPCR) in the dPCR reaction of each measurement. If several
+#'   technical replicates are used, this should be the average number of
+#'   positive partitions per replicate.
+#' @param total_partitions_col Name of the column in the `measurements`
+#'   data.frame containing the number of total partitions (e.g. valid droplets
+#'   for ddPCR) in the dPCR reaction of each measurement. If several technical
+#'   replicates are used, this should be the average number of valid partitions
+#'   per replicate. Note that this is really the number of *valid* partitions,
+#'   not the number of positive partitions.
+#' @param n_averaged The number of technical replicates (i.e. repeated PCR runs)
+#'   used for each biological replicate. The concentration provided in the
+#'   `measurements` `data.frame` is assumed to be the average or pooled estimate
+#'   from several technical replicates. Can be either a single number (it is
+#'   then assumed that the number of averaged replicates is the same for each
+#'   observation) or a vector (one value for each observation).
+#' @param n_averaged_col Name of the column in the `measurements` data.frame
+#'   containing the number of technical replicates over which the measurements
+#'   have been averaged/pooled. This is an alternative to specifying
+#'   `n_averaged`.
+#'
+#' @export
+positive_partitions <- function(measurements = NULL,
+                              id_col = "sample_id",
+                              replicate_col = NULL,
+                              positive_partitions_col = "positive_partitions",
+                              total_partitions_col = NULL,
+                              n_averaged = 1,
+                              n_averaged_col = NULL
+    ) {
+  model_component("positive_partitions", {
+    if (is.null(measurements)) {
+      if (is.null(modeldata$.inputs$df)) {
+        cli::cli_abort("Please provide a `data.frame` with measurements.")
+      } else {
+        measurements <- modeldata$.inputs$df
+      }
+    }
+
+    measurements <- select_required_cols(
+      measurements,
+      required_cols = list(
+        id_col, positive_partitions_col, replicate_col,
+        n_averaged_col, total_partitions_col
+      ),
+      col_names = c(
+        "sample_id", "positive_partitions", "replicate_id",
+        "n_averaged", "total_partitions"
+      )
+    )
+
+    measurements <- measurements[!is.na(positive_partitions) & !is.na(sample_id), ]
+    measurements[, positive_partitions := as.integer(positive_partitions)]
+
+    modeldata$.inputs$id_col <- id_col
+
+    if (nrow(measurements)==0) {
+      cli::cli_abort(
+        "The provided measurements `data.frame` contains no valid measurements."
+      )
+    }
+
+    # measurements and samples
+    modeldata$n_measured <- nrow(measurements)
+    modeldata$n_samples <- length(unique(measurements[["sample_id"]]))
+    modeldata$.metainfo$sample_ids <- sort(unique(measurements[["sample_id"]]))
+    modeldata$measure_to_sample <- sapply(measurements[["sample_id"]], function(x) {
+      which(x == modeldata$.metainfo$sample_ids)[[1]]
+    })
+    modeldata$positive_partitions <- measurements[["positive_partitions"]]
+    modeldata$.init$concentration_with_noise_raw <- rep(0, modeldata$n_measured)
+
+    # explicit replicates
+    if (!is.null(replicate_col)) {
+      modeldata$.metainfo$obs_ids <- measurements[, c("sample_id", "replicate_id")]
+      modeldata$replicate_ids <- as.integer(measurements[["replicate_id"]])
+    } else {
+      modeldata$.metainfo$obs_ids <- measurements[, c("sample_id")]
+    }
+
+    # number of averaged technical replicates
+    if (!is.null(n_averaged_col)){
+      modeldata$n_averaged <- as.numeric(measurements[["n_averaged"]])
+      if (any(is.na(modeldata$n_averaged))) {
+        cli::cli_abort(paste0(
+          "The column `", n_averaged_col, "` contains missing ",
+          "values for some of the observed measurements."
+        ))
+      }
+    } else if (length(n_averaged) == 1) {
+      modeldata$n_averaged <- rep(n_averaged, modeldata$n_measured)
+    } else if (length(n_averaged) == modeldata$n_measured) {
+      modeldata$n_averaged <- n_averaged
+    } else {
+      cli::cli_abort(paste(
+        "The length of `n_averaged` must be either 1 or equal to the",
+        "number of samples."
+      ))
+    }
+
+    # total valid partitions in PCR run
+    if (!is.null(total_partitions_col)) {
+      modeldata$dPCR_total_partitions <- as.integer(
+        measurements[["total_partitions"]]
+      )
+    } else {
+      cli::cli_abort(paste0(
+        "You specified `total_partitions_col = NULL`, but this is required ",
+        "for the `positive_partitions` model component. Please specify a ",
+        "column with the total number of partitions in the PCR run via the ",
+        "`total_partitions_col` argument in ",
+        cli_help("positive_partitions"), "."
+      ))
+    }
+
+    modeldata$obs_dist = 4
+
+    modeldata$measured_concentrations <- numeric(0)
+
+    return(modeldata)
+  })
+}
 
 #' Model measurement noise (internal helper function)
 #'
@@ -238,6 +378,14 @@ noise_ <-
     )
     modeldata$.init$nu_upsilon_a <- 0.1 # 10% coefficient of variation
 
+    if (!is.null(modeldata$obs_dist) && (modeldata$obs_dist == 4 && cv_type != "dPCR")) {
+      cli::cli_abort(paste0(
+        "You specified positive partitions from a dPCR assay as measurements, ",
+        "but the noise model is not compatible with this observation type. ",
+        "Please use `noise_dPCR()` instead."
+      ))
+    }
+
     if (cv_type == "constant_cv") {
       modeldata$total_partitions_observe <- FALSE
       modeldata$dPCR_total_partitions <- numeric(0)
@@ -255,9 +403,13 @@ noise_ <-
       modeldata$cv_pre_type <- numeric(0)
       modeldata$cv_pre_approx_taylor <- numeric(0)
     } else if (cv_type == "dPCR") {
-      modeldata$cv_type <- 1
+      if (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4) {
+        modeldata$cv_type <- 3 # binomial model of positive partitions
+      } else {
+        modeldata$cv_type <- 1 # continuous model of measured concentrations
+      }
 
-      if (partitions_observe) {
+      if (partitions_observe || (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4)) {
         modeldata$total_partitions_observe <- TRUE
         modeldata$max_partitions_prior <- numeric(0)
         modeldata$partition_loss_mu_prior <- numeric(0)
@@ -337,6 +489,13 @@ noise_ <-
       )
 
       if (prePCR_noise_type == "gamma") {
+        if (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4) {
+          cli::cli_abort(paste0(
+            "`prePCR_noise_type = ", prePCR_noise_type, "` currently not ",
+            "supported for positive_partitions model. ",
+            "Available options: `log-normal`."
+          ))
+        }
         modeldata$cv_pre_type <- 0
       } else if (prePCR_noise_type %in% c("log-normal", "lognormal")) {
         modeldata$cv_pre_type <- 1
@@ -526,6 +685,13 @@ noise_dPCR <-
 #' @export
 nondetect_none <- function() {
   model_component("nondetect_none", {
+    if (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4) {
+      cli::cli_abort(paste0(
+        "You specified positive partitions from a dPCR assay as measurements, ",
+        "which means that non-detects (zero positive partitions) must be ",
+        "modeled. Please use `nondetect = nondetect_dPCR()`."
+      ))
+    }
     modeldata$LOD_model <- 0
     modeldata$LOD_scale <- numeric(0)
     modeldata$LOD_drop_prob <- 0
@@ -562,10 +728,7 @@ nondetect_none <- function() {
 #' @family {LOD models}
 nondetect_dPCR <- function(drop_prob = 1e-10) {
  model_component("nondetect_dPCR", {
-    modeldata$LOD_model <- 2
-    modeldata$LOD_scale <- numeric(0)
-
-    if (is.null(modeldata$cv_type) || modeldata$cv_type != 1) {
+    if (is.null(modeldata$cv_type) || !(modeldata$cv_type %in% c(1,3))) {
       cli::cli_abort(paste0(
         "To use nondetect = ",
         cli_help("nondetect_dPCR"), ", you must specify noise = ",
@@ -573,9 +736,19 @@ nondetect_dPCR <- function(drop_prob = 1e-10) {
       ))
     }
 
-    modeldata$LOD_drop_prob <- drop_prob
-
-    return(modeldata)
+    if (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4) {
+      # when using a binomial model of positive partitions,
+      # non-detects are automatically accounted for and don't have to be modeled
+      modeldata$LOD_model <- 0
+      modeldata$LOD_scale <- numeric(0)
+      modeldata$LOD_drop_prob <- 0
+      return(modeldata)
+    } else {
+      modeldata$LOD_model <- 2
+      modeldata$LOD_scale <- numeric(0)
+      modeldata$LOD_drop_prob <- drop_prob
+      return(modeldata)
+    }
   })
 }
 
