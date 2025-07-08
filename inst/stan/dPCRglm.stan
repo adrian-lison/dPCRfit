@@ -156,7 +156,7 @@ parameters {
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_sigma_prior[2] > 0) ? 1 : 0] real<lower=0> partition_loss_sigma; // logit-level standard deviation of proportion of lost partitions
   vector[(cv_type == 1) && total_partitions_observe!=1 ? sum(n_averaged) : 0] partition_loss_raw; // non-centered partition loss noise
   array[(cv_type == 1 || cv_type == 3) && nu_upsilon_c_prior[2] > 0 ? 1 : 0] real<lower=0> nu_upsilon_c; // conversion factor (scaled partition volume)
-  vector[cv_type == 3 ? n_measured : 0] concentration_with_noise_raw;
+  vector<lower=(cv_pre_type[1]==0 ? 0 : negative_infinity())>[cv_type == 3 ? n_measured : 0] concentration_with_noise_raw;
 }
 transformed parameters {
   vector<lower=0>[n_samples] true_concentration;
@@ -225,9 +225,16 @@ transformed parameters {
   } else if (cv_type == 2) { // constant variance
     cv = (nu_upsilon_a * mean(measured_concentrations) / concentration);
   } else if (cv_type == 3) {
-    concentration_with_noise = lognormal5_noncentered(
-      concentration, nu_upsilon_a, concentration_with_noise_raw
-      );
+    if (cv_pre_type[1] == 0) {
+        concentration_with_noise = gamma3_noncentered(
+          concentration, nu_upsilon_a, concentration_with_noise_raw
+          );
+        //concentration_with_noise = concentration * nu_upsilon_a .* concentration_with_noise_raw;
+      } else if (cv_pre_type[1] == 1) {
+        concentration_with_noise = lognormal5_noncentered(
+          concentration, nu_upsilon_a, concentration_with_noise_raw
+          );
+      }
   }
 
   if (cv_type != 3) {
@@ -314,7 +321,11 @@ model {
         cv // coefficient of variation
       );
     } else if (obs_dist == 4) {
-      concentration_with_noise_raw ~ std_normal(); // non-centered noise
+      if (cv_pre_type[1] == 0) {
+        concentration_with_noise_raw ~ gamma(inv_square(nu_upsilon_a), 1);
+      } else if (cv_pre_type[1] == 1) {
+        concentration_with_noise_raw ~ std_normal(); // non-centered noise
+      }
       target += binomial_lupmf(
         positive_partitions_sum_int |
         total_partitions_sum_int, // total valid partitions

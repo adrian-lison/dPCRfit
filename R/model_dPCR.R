@@ -219,7 +219,7 @@ positive_partitions <- function(measurements = NULL,
       which(x == modeldata$.metainfo$sample_ids)[[1]]
     })
     modeldata$positive_partitions <- measurements[["positive_partitions"]]
-    modeldata$.init$concentration_with_noise_raw <- rep(0, modeldata$n_measured)
+    modeldata$.init$concentration_with_noise_raw <- rep(1, modeldata$n_measured)
 
     # explicit replicates
     if (!is.null(replicate_col)) {
@@ -489,13 +489,6 @@ noise_ <-
       )
 
       if (prePCR_noise_type == "gamma") {
-        if (!is.null(modeldata$obs_dist) && modeldata$obs_dist == 4) {
-          cli::cli_abort(paste0(
-            "`prePCR_noise_type = ", prePCR_noise_type, "` currently not ",
-            "supported for positive_partitions model. ",
-            "Available options: `log-normal`."
-          ))
-        }
         modeldata$cv_pre_type <- 0
       } else if (prePCR_noise_type %in% c("log-normal", "lognormal")) {
         modeldata$cv_pre_type <- 1
