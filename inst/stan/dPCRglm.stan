@@ -156,7 +156,7 @@ parameters {
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_sigma_prior[2] > 0) ? 1 : 0] real<lower=0> partition_loss_sigma; // logit-level standard deviation of proportion of lost partitions
   vector[(cv_type == 1) && total_partitions_observe!=1 ? sum(n_averaged) : 0] partition_loss_raw; // non-centered partition loss noise
   array[(cv_type == 1 || cv_type == 3) && nu_upsilon_c_prior[2] > 0 ? 1 : 0] real<lower=0> nu_upsilon_c; // conversion factor (scaled partition volume)
-  vector<lower=(cv_pre_type[1]==0 ? 0 : negative_infinity())>[cv_type == 3 ? n_measured : 0] concentration_with_noise_raw;
+  vector<lower=(((cv_type == 1 || cv_type == 3) && cv_pre_type[1]==0) ? 0 : negative_infinity())>[cv_type == 3 ? n_measured : 0] concentration_with_noise_raw;
 }
 transformed parameters {
   vector<lower=0>[n_samples] true_concentration;
