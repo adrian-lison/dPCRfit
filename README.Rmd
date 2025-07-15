@@ -170,7 +170,7 @@ model_prediction <- predict(
 ggplot(dPCR_data, aes(x=biomass)) +
   geom_point(aes(y=concentration)) +
   geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
-  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = q5, ymax = q95), fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
   xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
   theme_bw()
 ```
@@ -180,7 +180,7 @@ We can also print the fitted coefficients with 95% credible intervals. The dashe
 ggplot(fitted_model$coef_summary) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_point(aes(y = variable, x = median)) +
-  geom_errorbar(aes(y = variable, xmin = q5, xmax = q95), width = 0.2) +
+  geom_errorbar(aes(y = variable, xmin = lower_95, xmax = upper_95), width = 0.2) +
   geom_vline(data = data.frame(variable = c("(Intercept)", "biomass"), true = c(0.2, 0.6)), aes(xintercept = true), linetype = "dotted", color = "darkred") +
   ylab("Coefficient") + xlab("Estimate") + facet_wrap(~variable, scales = "free", ncol = 1) +
   scale_x_continuous(expand = c(0.2, 0.2)) +
@@ -252,7 +252,7 @@ model_prediction <- predict(
 ggplot(dPCR_data, aes(x=biomass)) +
   geom_point(aes(y=concentration)) +
   geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
-  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = q5, ymax = q95), fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
   xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
   theme_bw()
 ```

@@ -187,8 +187,8 @@ fitted_model <- dPCRfit(
 #> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
 #> Chain 2 Iteration:  200 / 2000 [ 10%]  (Warmup) 
 #> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
@@ -197,8 +197,8 @@ fitted_model <- dPCRfit(
 #> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
@@ -214,28 +214,28 @@ fitted_model <- dPCRfit(
 #> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 3 finished in 32.5 seconds.
 #> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 3 finished in 18.6 seconds.
 #> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 1 finished in 33.1 seconds.
+#> Chain 1 finished in 19.0 seconds.
 #> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 4 finished in 34.2 seconds.
+#> Chain 4 finished in 19.8 seconds.
 #> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 2 finished in 40.0 seconds.
+#> Chain 2 finished in 25.0 seconds.
 #> 
 #> All 4 chains finished successfully.
-#> Mean chain execution time: 35.0 seconds.
-#> Total execution time: 40.5 seconds.
+#> Mean chain execution time: 20.6 seconds.
+#> Total execution time: 25.1 seconds.
 ```
 
 ## Results
@@ -250,9 +250,9 @@ summary(fitted_model)
 #> Number of observations: 100 
 #> 
 #> Coefficients:
-#> variable     mean    median  sd       mad     q5      q95     rhat    ess_bulk  ess_tail
-#> (Intercept)  0.1989  0.1545  0.17121  0.1475  0.0132  0.5412  0.9996  3127      1929    
-#> biomass      0.6003  0.6006  0.02537  0.0249  0.5589  0.6416  1.0009  6383      3046    
+#> variable     mean    median  sd       mad     lower_95  upper_95  rhat    ess_bulk  ess_tail
+#> (Intercept)  0.1989  0.1545  0.17121  0.1475  0.00642   0.6305    0.9996  3127      1929    
+#> biomass      0.6003  0.6006  0.02537  0.0249  0.54983   0.6491    1.0009  6383      3046    
 #> 
 #> Fitted via MCMC using 4 chains with each:
 #> 1000 warm-up iterations
@@ -275,7 +275,7 @@ model_prediction <- predict(
 ggplot(dPCR_data, aes(x=biomass)) +
   geom_point(aes(y=concentration)) +
   geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
-  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = q5, ymax = q95), fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
   xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
   theme_bw()
 ```
@@ -289,7 +289,7 @@ The dashed line shows the simulated ground truth.
 ggplot(fitted_model$coef_summary) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_point(aes(y = variable, x = median)) +
-  geom_errorbar(aes(y = variable, xmin = q5, xmax = q95), width = 0.2) +
+  geom_errorbar(aes(y = variable, xmin = lower_95, xmax = upper_95), width = 0.2) +
   geom_vline(data = data.frame(variable = c("(Intercept)", "biomass"), true = c(0.2, 0.6)), aes(xintercept = true), linetype = "dotted", color = "darkred") +
   ylab("Coefficient") + xlab("Estimate") + facet_wrap(~variable, scales = "free", ncol = 1) +
   scale_x_continuous(expand = c(0.2, 0.2)) +
@@ -358,58 +358,58 @@ fitted_model_binomial <- dPCRfit(
 #> Chain 2 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 3 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 4 Iteration:    1 / 2000 [  0%]  (Warmup) 
-#> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
 #> Chain 2 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
 #> Chain 2 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 2 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
-#> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
 #> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 4 finished in 2.9 seconds.
-#> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
-#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 1 finished in 3.2 seconds.
+#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 4 finished in 3.3 seconds.
+#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 1 finished in 3.5 seconds.
+#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 3 finished in 3.6 seconds.
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 2 finished in 3.8 seconds.
+#> Chain 2 finished in 4.0 seconds.
+#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 3 finished in 4.4 seconds.
 #> 
 #> All 4 chains finished successfully.
-#> Mean chain execution time: 3.4 seconds.
-#> Total execution time: 4.1 seconds.
+#> Mean chain execution time: 3.8 seconds.
+#> Total execution time: 4.6 seconds.
 ```
 
 We obtain a very similar result as when fitting to concentration
@@ -423,9 +423,9 @@ summary(fitted_model_binomial)
 #> Number of observations: 100 
 #> 
 #> Coefficients:
-#> variable     mean    median  sd       mad      q5        q95     rhat   ess_bulk  ess_tail
-#> (Intercept)  0.1462  0.1039  0.13675  0.10520  0.007943  0.4233  1.001  3118      1933    
-#> biomass      0.5681  0.5679  0.02338  0.02318  0.530470  0.6067  1.001  5325      3179    
+#> variable     mean    median  sd       mad      lower_95  upper_95  rhat   ess_bulk  ess_tail
+#> (Intercept)  0.1464  0.111   0.13001  0.10808  0.004658  0.4736    1.001  3788      2262    
+#> biomass      0.5680  0.568   0.02378  0.02397  0.521637  0.6150    1.001  4918      3183    
 #> 
 #> Fitted via MCMC using 4 chains with each:
 #> 1000 warm-up iterations
@@ -446,7 +446,7 @@ model_prediction <- predict(
 ggplot(dPCR_data, aes(x=biomass)) +
   geom_point(aes(y=concentration)) +
   geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
-  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = q5, ymax = q95), fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
   xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
   theme_bw()
 ```
