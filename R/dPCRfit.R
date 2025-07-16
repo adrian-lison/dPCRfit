@@ -204,7 +204,7 @@ print.dPCRfit_result <- function(object, ...) {
       ))
   } else {
     cat("Coefficients:\n")
-    cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")]))
+    cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "lower_95", "upper_95")]))
   }
 }
 
