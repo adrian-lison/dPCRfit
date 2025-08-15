@@ -201,7 +201,7 @@ positive_partitions <- function(measurements = NULL,
     )
 
     measurements <- measurements[!is.na(positive_partitions) & !is.na(sample_id), ]
-    measurements[, positive_partitions := as.integer(positive_partitions)]
+    measurements[, positive_partitions := as.numeric(positive_partitions)]
 
     modeldata$.inputs$id_col <- id_col
 
