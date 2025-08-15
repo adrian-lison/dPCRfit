@@ -12,7 +12,7 @@ data {
   int<lower=0> n_samples; // number of different samples
   int<lower=0> n_measured; // number of all measurements
   array[n_measured] int<lower=1, upper=n_samples> measure_to_sample; // index mapping measurements to samples
-  array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement (is vector for vectorization)
+  array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement
   int<lower=0, upper=4> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal, 4 for binomial (partition counts)
   vector<lower=0>[obs_dist != 4 ? n_measured : 0] measured_concentrations; // measured concentrations
   array[obs_dist == 4 ? n_measured : 0] int<lower=0> positive_partitions; // number of positive partitions (binomial model)
@@ -25,7 +25,7 @@ data {
   int <lower=0, upper=1> link_type; // 0 for identity, 1 for log-link
 
   // Coefficient of variation (CV) of measurements ----
-  int<lower=0, upper=3> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var
+  int<lower=0, upper=3> cv_type; // 0 for constant, 1 for dPCR, 2 for constant_var, 3 for partition counts
   array[2] real nu_upsilon_a_prior; // prior for pre-PCR CV
   int<lower=0, upper=1> total_partitions_observe; // 0 for not observed, 1 for observed
   vector<lower=0>[(cv_type == 1 || cv_type == 3) && total_partitions_observe ? n_measured : 0] dPCR_total_partitions; // total number of partitions in dPCR

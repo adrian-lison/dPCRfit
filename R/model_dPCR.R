@@ -151,12 +151,12 @@ concentration_measurements <-
 #' @param positive_partitions_col Name of the column in the `measurements`
 #'   data.frame containing the number of positive partitions (e.g. positive
 #'   droplets for ddPCR) in the dPCR reaction of each measurement. If several
-#'   technical replicates are used, this should be the average number of
+#'   technical replicates are used, this should be the AVERAGE number of
 #'   positive partitions per replicate.
 #' @param total_partitions_col Name of the column in the `measurements`
 #'   data.frame containing the number of total partitions (e.g. valid droplets
 #'   for ddPCR) in the dPCR reaction of each measurement. If several technical
-#'   replicates are used, this should be the average number of valid partitions
+#'   replicates are used, this should be the AVERAGE number of valid partitions
 #'   per replicate. Note that this is really the number of *valid* partitions,
 #'   not the number of positive partitions.
 #' @param n_averaged The number of technical replicates (i.e. repeated PCR runs)
