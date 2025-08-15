@@ -171,36 +171,3 @@ vector log_E_exp_lnorm(vector lambda, real nu_pre, vector t) {
 vector log_E_exp_lnorm(vector lambda, real nu_pre, real t) {
   return(log_E_exp_lnorm(lambda, nu_pre, rep_vector(t, num_elements(lambda))));
 }
-
-/**
-  * Draw number of total valid partitions in dPCR run, assuming
-  * lognormally distributed partition loss, and assuming that
-  * the maximum number of partitions is 3 standard deviations above the mean
-  *
-  * @param mu_m Expected number of partitions
-  *
-  * @param m_cv Coefficient of variation of number of partitions
-  *
-  * @param noise_raw Standard normal noise for non-centered parameterization
-  *
-  * @return A vector of total partition numbers, same length as noise_raw
-  */
-vector total_partitions_noncentered(real m_mu, real m_cv, vector noise_raw, array[] int n_replicates) {
-  int N = num_elements(noise_raw);
-  if (m_cv == 0) {
-    return rep_vector(m_mu, N);
-  }
-  real max_partitions = m_mu + 3 * m_mu * m_cv;
-  real lnorm_unit_mean = max_partitions - m_mu;
-  real lnorm_unit_sd = m_mu * m_cv;
-  real sigma2 = log((lnorm_unit_sd / lnorm_unit_mean)^2 + 1);
-  real meanlog = log(lnorm_unit_mean) - sigma2 / 2;
-  real sdlog = sqrt(sigma2);
-  vector[N] lost_partitions = exp(meanlog + sdlog * noise_raw); // log-normal
-  vector[N] m_partitions = max_partitions - lost_partitions;
-  m_partitions = softplus(m_partitions, 10); // softplus as soft >0 constraint
-  // sum of partitions over all replicates of a sample
-  vector[num_elements(n_replicates)] total_partitions;
-  total_partitions = sum_partial_vector_n(m_partitions, n_replicates);
-  return(total_partitions);
-}
