@@ -3,7 +3,8 @@
 #' @description Sets model fitting options in `dPCRfit`.
 #'
 #' @param sampler Which type of sampler should be used for model fitting?
-#'   Currently, only [sampler_stan_mcmc()] is supported.
+#'   Currently, [sampler_stan_mcmc()] is recommended. For fast but less accurate
+#'   estimation, [sampler_stan_pathfinder()] can be used.
 #' @param model Details about the model file to be used, see
 #'   [model_stan_opts()].
 #'
@@ -98,7 +99,11 @@ get_pathfinder_inits <- function(stanmodel_instance, md, inits) {
   arguments <- c(
     list(data = md),
     init = function() inits,
-    list(num_paths = 4, draws = 100, seed = 0)
+    list(
+      seed = 0, max_lbfgs_iters = 1000,
+      psis_resample = FALSE, sig_figs = 14,
+      show_messages = FALSE, show_exceptions = FALSE
+    )
   )
   return(fit_stan(
     stanmodel_instance, arguments, fit_method = "pathfinder", silent = TRUE

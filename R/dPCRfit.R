@@ -54,6 +54,11 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
       beta_prior = prior_coefficients
     )
 
+  # run checks
+  for (check in md$.checks) {
+    check(md, data)
+  }
+
   # prepare model data
   inits <- md$.init
   metainfo <- md$.metainfo
@@ -97,10 +102,11 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
   if (class(fit_opts$sampler) == "mcmc") {
     tryCatch(
       {
+        cat("Initializing chains via pathfinder...\n")
         pathfind_init <- get_pathfinder_inits(stanmodel_instance, md, inits)
         stopifnot(!"errors" %in% names(pathfind_init))
         options(cmdstanr_warn_inits = FALSE)
-        arguments$init <- pathfind_init
+        arguments$init <- pathfind_init$draws()
       },
       error = function(e) {
         cli::cli_warn(paste(
@@ -124,7 +130,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
                "Could not summarize residuals:", e$message
              )))
     if (class(fit_opts$sampler) == "mcmc") {
-      tryCatch(result$diagnostic_summary <- result$fit$diagnostic_summary(),
+      tryCatch(result$diagnostic_summary <- suppressMessages(result$fit$diagnostic_summary()),
                error = function(e) cli::cli_warn(paste(
                  "Could not obtain model diagnostics:", e$message
                )))
@@ -198,7 +204,7 @@ print.dPCRfit_result <- function(object, ...) {
       ))
   } else {
     cat("Coefficients:\n")
-    cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "q5", "q95")]))
+    cat(format_table(object$coef_summary[,c("variable", "mean", "median", "sd", "lower_95", "upper_95")]))
   }
 }
 

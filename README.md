@@ -108,30 +108,56 @@ simulated concentration measurements. For this, we must first define a
 model of the measurement noise. In our simulated data, we assumed a dPCR
 assay with the following parameters:
 
-- total number of partitions: 25’000
-- concentration conversion factor (gc per partition for one
-  concentration unit in original sample): 1.73e-5
+- maximum number of partitions: 30’000
+- partition loss (invalid partitions): average: 12%, stdev: 5% points,
+  max: 50%
+- concentration conversion factor : 1.73e-5 (gc/partition for 1
+  concentration unit in original sample)
 - pre-PCR coefficient of variation: 10%
 
-The helper function `noise_dPCR()` allows us to specify such a dPCR
-assay with suitable parameters:
+In our model, we will assume that we don’t know the details of the dPCR
+assay. We therefore specify uncertain priors for the assay
+characteristics using the helper function `noise_dPCR()`:
 
 ``` r
 noise_model <- noise_dPCR(
-          total_partitions_prior_mu = 25000, # there are 25000 partitions
-          total_partitions_prior_sigma = 0, # fix the number of partitions
-          volume_scaled_prior_mu = 1.73e-5, # the conversion factor
-          volume_scaled_prior_sigma = 0, # fix the conversion factor
-          prePCR_noise_type = "lognormal" # we assume that pre-PCR noise is log-normally distributed
+          max_partitions_prior_lower = 10000, # partition number of chip between 10'000 and 40'000
+          max_partitions_prior_upper = 40000,
+          partition_loss_mean_prior_lower = 0.05, # expected share of invalid partitions between 5% and 30%
+          partition_loss_mean_prior_upper = 0.3,
+          partition_loss_variation_prior_lower = 0.5, # broad prior on variation of share of invalid partitions
+          partition_loss_variation_prior_upper = 2,
+          partition_loss_max = 0.5, # maximum share of invalid partitions is 50%
+          volume_scaled_prior_mu = 1e-5, # broad prior for the concentration conversion factor
+          volume_scaled_prior_sigma = 4e-5,
+          prePCR_noise_type = "lognormal", # we assume that pre-PCR noise is log-normally distributed
         )
 ```
 
-Note that in this example, by setting the standard deviation (sigma) of
-the priors to 0, we fix the parameters to their true values. In
-practice, the exact number of partitions or the conversion factor may be
-uncertain, which you can express by providing a prior with positive
-standard deviation. The parameter value will then be estimated jointly
-from the data.
+To summarize, we have made the following assumptions:
+
+- we don’t know what chip was used, but expect it to have between 10’000
+  and 40’000 partitions
+- the average share of invalid partitions per dPCR run could be
+  somewhere between 5% and 30%
+- we don’t know how much the share of invalid partitions varies between
+  dPCR runs, so we use a broad prior for it
+- we assume that PCR runs with more than 50% invalid partitions are
+  discarded during quality control
+- we think that the conversion factor is on the order of magnitude of
+  1e-5 but we use a broad prior for it
+
+Note that we can also visualize the resulting prior distribution for the
+number of partitions:
+
+``` r
+plot_prior(noise_model, "partitions")
+```
+
+<img src="man/figures/README-plot_prior-1.png" width="100%" />
+
+Using these priors, the true values of these parameters will be
+estimated jointly from the data.
 
 Once we have a suitable noise model, we can run a linear regression
 using `dPCRfit`:
@@ -144,11 +170,14 @@ fitted_model <- dPCRfit(
         prior_coefficients = c(0,1), # standard normal prior for the regression coefficients
         measurements = concentration_measurements(
           id_col = "sample_id", # name of the column with the sample id
-          replicate_col = "replicate_id", # name of the column with the biological replicate id
+          replicate_col = "bio_replicate_id", # name of the column with the biological replicate id
           concentration_col = "concentration", # name of the column with the concentration measurements
+          n_averaged_col = "n_technical_reps" # name of the column with the number of technical replicates per biological replicate
         ),
-        noise = noise_model # the dPCR noise model we defined above
+        noise = noise_model, # the dPCR noise model we defined above
+        nondetect = nondetect_dPCR() # also model non-detects from dPCR
       )
+#> Initializing chains via pathfinder...
 #> Running MCMC with 4 parallel chains...
 #> 
 #> Chain 1 Iteration:    1 / 2000 [  0%]  (Warmup) 
@@ -156,57 +185,57 @@ fitted_model <- dPCRfit(
 #> Chain 3 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 4 Iteration:    1 / 2000 [  0%]  (Warmup) 
 #> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 2 Iteration:  200 / 2000 [ 10%]  (Warmup) 
-#> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
-#> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
 #> Chain 2 Iteration:  600 / 2000 [ 30%]  (Warmup) 
-#> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
 #> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
-#> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
-#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
-#> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
 #> Chain 2 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
 #> Chain 2 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
 #> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
 #> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
-#> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 1 finished in 8.4 seconds.
-#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
 #> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
-#> Chain 3 finished in 8.3 seconds.
+#> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
 #> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
-#> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 3 finished in 18.6 seconds.
+#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 1 finished in 19.0 seconds.
 #> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 4 finished in 10.2 seconds.
+#> Chain 4 finished in 19.8 seconds.
+#> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
 #> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
 #> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
-#> Chain 2 finished in 11.8 seconds.
+#> Chain 2 finished in 25.0 seconds.
 #> 
 #> All 4 chains finished successfully.
-#> Mean chain execution time: 9.7 seconds.
-#> Total execution time: 11.9 seconds.
+#> Mean chain execution time: 20.6 seconds.
+#> Total execution time: 25.1 seconds.
 ```
 
 ## Results
@@ -221,9 +250,9 @@ summary(fitted_model)
 #> Number of observations: 100 
 #> 
 #> Coefficients:
-#> variable     mean    median  sd      mad     q5       q95     rhat   ess_bulk  ess_tail
-#> (Intercept)  0.3826  0.3029  0.3172  0.2921  0.02174  1.0142  1.002  2623      1882    
-#> biomass      0.6219  0.6224  0.0382  0.0373  0.55763  0.6853  1.001  4863      2922    
+#> variable     mean    median  sd       mad     lower_95  upper_95  rhat    ess_bulk  ess_tail
+#> (Intercept)  0.1989  0.1545  0.17121  0.1475  0.00642   0.6305    0.9996  3127      1929    
+#> biomass      0.6003  0.6006  0.02537  0.0249  0.54983   0.6491    1.0009  6383      3046    
 #> 
 #> Fitted via MCMC using 4 chains with each:
 #> 1000 warm-up iterations
@@ -246,7 +275,7 @@ model_prediction <- predict(
 ggplot(dPCR_data, aes(x=biomass)) +
   geom_point(aes(y=concentration)) +
   geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
-  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = q5, ymax = q95), fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
   xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
   theme_bw()
 ```
@@ -260,7 +289,7 @@ The dashed line shows the simulated ground truth.
 ggplot(fitted_model$coef_summary) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_point(aes(y = variable, x = median)) +
-  geom_errorbar(aes(y = variable, xmin = q5, xmax = q95), width = 0.2) +
+  geom_errorbar(aes(y = variable, xmin = lower_95, xmax = upper_95), width = 0.2) +
   geom_vline(data = data.frame(variable = c("(Intercept)", "biomass"), true = c(0.2, 0.6)), aes(xintercept = true), linetype = "dotted", color = "darkred") +
   ylab("Coefficient") + xlab("Estimate") + facet_wrap(~variable, scales = "free", ncol = 1) +
   scale_x_continuous(expand = c(0.2, 0.2)) +
@@ -271,6 +300,158 @@ ggplot(fitted_model$coef_summary) +
 that the intercept was estimated with large uncertainty, due to the
 increased noise at low concentrations. In contrast, the slope of the
 linear relationship with biomass was estimated quite precisely.
+
+## Fitting to positive partition counts
+
+If we have data on the number of positive and total partitions from the
+dPCR (as we do in our simulated data), we can also fit a binomial
+regression model instead. For this, we again specify a noise model using
+`noise_dPCR`, but we don’t need prior assumptions for the number of
+total partitions this time (as we have observed them). However, we still
+need to specify the concentration conversion factor (gc/partition for 1
+concentration unit in original sample):
+
+``` r
+noise_model2 <- noise_dPCR(
+          partitions_observe = TRUE, # we have observed the number of total partitions (they are in our dPCR_data)
+          volume_scaled_prior_mu = 1.73e-5, # this time, we fix the conversion factor to the true value
+          volume_scaled_prior_sigma = 0,
+          prePCR_noise_type = "lognormal" # we assume that pre-PCR noise is log-normally distributed
+        )
+```
+
+Note: As it turns out, when using the binomial model, it is actually
+**more** important to provide an informative prior for the conversion
+factor. This is why we set `volume_scaled_prior` to the true value in
+our example above. If we used a broader prior for the conversion factor,
+the model would struggle to precisely estimate the coefficients of our
+linear regression.
+
+Now we can fit a binomial regression model to the positive partitions
+using the `dPCRfit()` function. The only difference to fitting to
+concentration measurements is that we now use the
+`positive_partitions()` function to specify our measurements. We also
+specify the names of the columns containing the number of positive and
+total partitions. Specifically, these are the averages over technical
+replicates, respectively.
+
+``` r
+fitted_model_binomial <- dPCRfit(
+        formula = avg_positive_partitions ~ biomass, # linear regression formula
+        data = dPCR_data, # our data
+        prior_intercept = c(0,1), # standard normal prior for the intercept
+        prior_coefficients = c(0,1), # standard normal prior for the regression coefficients
+        measurements = positive_partitions(
+          id_col = "sample_id", # name of the column with the sample id
+          replicate_col = "bio_replicate_id", # name of the column with the biological replicate id
+          positive_partitions_col = "avg_positive_partitions", # name of the column with the avg number of positive partitions per replicate
+          total_partitions_col = "avg_total_partitions", # name of the column with the avg number of total partitions per replicate
+          n_averaged_col = "n_technical_reps" # name of the column with the number of technical replicates per biological replicate
+        ),
+        noise = noise_model2, # the dPCR noise model
+        nondetect = nondetect_dPCR() # also model non-detects from dPCR
+      )
+#> Initializing chains via pathfinder...
+#> Running MCMC with 4 parallel chains...
+#> 
+#> Chain 1 Iteration:    1 / 2000 [  0%]  (Warmup) 
+#> Chain 2 Iteration:    1 / 2000 [  0%]  (Warmup) 
+#> Chain 3 Iteration:    1 / 2000 [  0%]  (Warmup) 
+#> Chain 4 Iteration:    1 / 2000 [  0%]  (Warmup) 
+#> Chain 4 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 1 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 2 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 1 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 4 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 2 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 4 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 1 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 2 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 3 Iteration:  200 / 2000 [ 10%]  (Warmup) 
+#> Chain 2 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 1 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 3 Iteration:  400 / 2000 [ 20%]  (Warmup) 
+#> Chain 4 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 4 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 2 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 2 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 1 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 1 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 4 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 3 Iteration:  600 / 2000 [ 30%]  (Warmup) 
+#> Chain 1 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 3 Iteration:  800 / 2000 [ 40%]  (Warmup) 
+#> Chain 4 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 2 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 1 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 3 Iteration: 1000 / 2000 [ 50%]  (Warmup) 
+#> Chain 3 Iteration: 1001 / 2000 [ 50%]  (Sampling) 
+#> Chain 4 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 1 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 2 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 4 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 1 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 3 Iteration: 1200 / 2000 [ 60%]  (Sampling) 
+#> Chain 2 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 4 finished in 3.3 seconds.
+#> Chain 1 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 1 finished in 3.5 seconds.
+#> Chain 3 Iteration: 1400 / 2000 [ 70%]  (Sampling) 
+#> Chain 2 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 3 Iteration: 1600 / 2000 [ 80%]  (Sampling) 
+#> Chain 2 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 2 finished in 4.0 seconds.
+#> Chain 3 Iteration: 1800 / 2000 [ 90%]  (Sampling) 
+#> Chain 3 Iteration: 2000 / 2000 [100%]  (Sampling) 
+#> Chain 3 finished in 4.4 seconds.
+#> 
+#> All 4 chains finished successfully.
+#> Mean chain execution time: 3.8 seconds.
+#> Total execution time: 4.6 seconds.
+```
+
+We obtain a very similar result as when fitting to concentration
+measurements:
+
+``` r
+summary(fitted_model_binomial)
+#> Call:
+#> dPCRfit(formula = avg_positive_partitions ~ biomass, link = identity)
+#> 
+#> Number of observations: 100 
+#> 
+#> Coefficients:
+#> variable     mean    median  sd       mad      lower_95  upper_95  rhat   ess_bulk  ess_tail
+#> (Intercept)  0.1464  0.111   0.13001  0.10808  0.004658  0.4736    1.001  3788      2262    
+#> biomass      0.5680  0.568   0.02378  0.02397  0.521637  0.6150    1.001  4918      3183    
+#> 
+#> Fitted via MCMC using 4 chains with each:
+#> 1000 warm-up iterations
+#> 1000 sampling iterations
+#> 
+#> Diagnostics:
+#> No problems detected.
+```
+
+``` r
+model_prediction <- predict(
+  fitted_model_binomial,
+  newdata = data.frame(biomass = seq(0,30)),
+  interval = "confidence",
+  keep_data = TRUE
+  )
+
+ggplot(dPCR_data, aes(x=biomass)) +
+  geom_point(aes(y=concentration)) +
+  geom_line(data = model_prediction, aes(x = biomass, y = mean), color = "blue") +
+  geom_ribbon(data = model_prediction, aes(x = biomass, ymin = lower_95, ymax = upper_95), fill = "blue", alpha = 0.3) +
+  xlab("Biomass (mg)") + ylab("Target gene concentration [gc/mL]") +
+  theme_bw()
+```
+
+<img src="man/figures/README-model_fit_plot_binomial-1.png" width="100%" />
 
 ## Citing the package
 
