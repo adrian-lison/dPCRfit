@@ -15,7 +15,7 @@ data {
   array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement
   int<lower=0, upper=4> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal, 4 for binomial (partition counts)
   vector<lower=0>[obs_dist != 4 ? n_measured : 0] measured_concentrations; // measured concentrations
-  array[obs_dist == 4 ? n_measured : 0] int<lower=0> positive_partitions; // number of positive partitions (binomial model)
+  vector<lower=0>[obs_dist == 4 ? n_measured : 0] positive_partitions; // number of positive partitions (binomial model)
 
   // Concentration ----
   array[2] real alpha_prior; // prior for intercept of concentration
