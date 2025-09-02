@@ -105,6 +105,7 @@ dPCRfit <- function(formula, data, link = c("identity", "log"),
         cat("Initializing chains via pathfinder...\n")
         pathfind_init <- get_pathfinder_inits(stanmodel_instance, md, inits)
         stopifnot(!"errors" %in% names(pathfind_init))
+        stopifnot(dim(pathfind_init$draws())[1]>0)
         options(cmdstanr_warn_inits = FALSE)
         arguments$init <- pathfind_init$draws()
       },
