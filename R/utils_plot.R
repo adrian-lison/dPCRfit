@@ -56,7 +56,7 @@ plot_prior <- function(component, type, n_draws = 1000, show_draws = 50, seed = 
     }
     pior_md <- modeldata_init() + component
     prior_plot <- plot_prior_partitions(
-      max_partitions_prior = pior_md$max_partitions_prior$max_partitions_prior * 1e4,
+      max_partitions_prior = pior_md$max_partitions_prior$max_partitions_prior,
       partition_loss_mu_prior = pior_md$partition_loss_mu_prior$partition_loss_mu_prior,
       partition_loss_sigma_prior = pior_md$partition_loss_sigma_prior$partition_loss_sigma_prior,
       partition_loss_max = pior_md$partition_loss_max,
@@ -89,10 +89,11 @@ plot_prior_partitions <- function(max_partitions_prior, partition_loss_mu_prior,
                                   partition_loss_sigma_prior, partition_loss_max,
                                   n_draws = 1000, show_draws = 50, seed = 0) {
   set.seed(seed)
-  if (max_partitions_prior[2] > 0) {
-    max_partitions <- extraDistr::rtnorm(
-      n_draws, mean = max_partitions_prior[1],
-      sd = max_partitions_prior[2], a = 0
+  if (max_partitions_prior[2] > max_partitions_prior[1]) {
+    max_partitions <- runif(
+      n_draws,
+      min = max_partitions_prior[1],
+      max = max_partitions_prior[2]
     )
   } else {
     max_partitions <- rep(max_partitions_prior[1], n_draws)

@@ -26,7 +26,8 @@ set_distribution <- function(distribution) {
     "gamma" = 0,
     "log-normal" = 1,
     "truncated normal" = 2,
-    "normal" = 3
+    "normal" = 3,
+    "digital PCR" = 5
   )
 
   distribution_aliases <- c(
@@ -34,7 +35,9 @@ set_distribution <- function(distribution) {
     "lognormal" = "log-normal",
     "truncated_normal" = "truncated normal",
     "truncated-normal" = "truncated normal",
-    "norm" = "normal"
+    "norm" = "normal",
+    "dpcr" = "digital PCR",
+    "ddpcr" = "digital PCR"
   )
 
   distribution <- stringr::str_to_lower(distribution)
@@ -255,6 +258,48 @@ find_mu_sigma_truncnorm <- function(q5_target, q95_target) {
   }
 
   return(list(mu = mu, sigma = sigma))
+}
+
+#' Define a lognormal prior in modeldata
+#'
+#' @param param Name of the parameter for which the prior is defined.
+#' @param mu Log mean.
+#' @param sigma Log standard deviation.
+#' @param two_sigma Two times the log standard deviation. Useful for defining priors
+#'   via the two-sigma rule-of-thumb (approximately 95% of probability mass).
+#' @param q5 Lower quantile (5%).
+#' @param q95 Upper quantile (95%).
+#'
+#' @return Prior specification for modeldata.
+#' @keywords internal
+set_prior_lognormal <- function(param, mu = NULL, sigma = NULL, two_sigma = NULL, q5 = NULL, q95 = NULL) {
+  if (!is.null(q5) && !is.null(q95)) {
+    if (q5 > q95) {
+      cli::cli_abort(
+        "The lower quantile (q5) must be smaller than the upper quantile (q95)",
+      )
+    }
+    mu <- (log(q5) + log(q95)) / 2
+    sigma <- (log(q95) - log(q5)) / (2 * qnorm(0.95))
+  } else {
+    if (is.null(mu)) {
+      cli::cli_abort(
+        "mu must be supplied for the lognormal prior",
+        .internal = TRUE
+      )
+    }
+    if (is.null(sigma)) {
+      if (is.null(two_sigma)) {
+        cli::cli_abort(
+          "Either sigma or two_sigma must be supplied for the lognormal prior",
+          .internal = TRUE
+        )
+      } else {
+        sigma <- two_sigma / 2
+      }
+    }
+  }
+  return(set_prior(param = param, dist = "lognormal", mu = mu, sigma = sigma))
 }
 
 #' Provide initialization value for a parameter based on the supplied prior with location and scale

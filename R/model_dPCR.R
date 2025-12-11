@@ -81,6 +81,7 @@ concentration_measurements <-
 
       # measurements and samples
       modeldata$n_measured <- nrow(measurements)
+      modeldata$n_nonzero <- sum(measurements[["concentration"]]>0, na.rm = T)
       modeldata$n_samples <- length(unique(measurements[["sample_id"]]))
       modeldata$.metainfo$sample_ids <- sort(unique(measurements[["sample_id"]]))
       modeldata$measure_to_sample <- sapply(measurements[["sample_id"]], function(x) {
@@ -129,7 +130,12 @@ concentration_measurements <-
       modeldata$obs_dist = set_distribution(distribution)
 
       modeldata$positive_partitions <- numeric(0)
-      modeldata$.init$concentration_with_noise_raw <- numeric(0)
+
+      if (modeldata$obs_dist == 5) {
+        modeldata$.init$concentration_with_noise_raw <- rep(1, modeldata$n_measured)
+      } else {
+        modeldata$.init$concentration_with_noise_raw <- numeric(0)
+      }
 
       return(modeldata)
     })
@@ -334,13 +340,14 @@ positive_partitions <- function(measurements = NULL,
 #'   lost in a valid dPCR run. During quality control, runs where the proportion
 #'   of invalid partitions is above some threshold (e.g. 50%) are often
 #'   discarded. This parameter can be used to represent such a QC threshold.
-#' @param volume_scaled_prior_mu Prior (mean) on the conversion factor
+#' @param volume_scaled_prior_lower Prior (5% quantile) on the conversion factor
 #'   (partition volume multiplied with the scaling of concentration in the
 #'   assay) for the dPCR reaction. See details for further explanation.
-#' @param volume_scaled_prior_sigma Prior (standard deviation) on the conversion
+#' @param volume_scaled_prior_upper Prior (95% quantile) on the conversion
 #'   factor (partition volume multiplied with the scaling of concentration in
-#'   the assay) for the dPCR reaction. If this is set to zero, the conversion
-#'   factor will be fixed to the prior mean and not estimated.
+#'   the assay) for the dPCR reaction. If this is identical to
+#'   `volume_scaled_prior_lower`, the conversion factor will be fixed and not
+#'   estimated.
 #' @param prePCR_noise_type The parametric distribution to assume for noise
 #'   before the PCR assay. Currently supported are "log-normal" and "gamma". The
 #'   choice of the parametric distribution typically makes no relevant
@@ -366,8 +373,8 @@ noise_ <-
            partition_loss_variation_prior_lower = NULL,
            partition_loss_variation_prior_upper = NULL,
            partition_loss_max = NULL,
-           volume_scaled_prior_mu = NULL,
-           volume_scaled_prior_sigma = NULL,
+           volume_scaled_prior_lower = NULL,
+           volume_scaled_prior_upper = NULL,
            prePCR_noise_type = "log-normal",
            use_taylor_approx = TRUE,
            modeldata) {
@@ -378,9 +385,9 @@ noise_ <-
     )
     modeldata$.init$nu_upsilon_a <- 0.1 # 10% coefficient of variation
 
-    if (!is.null(modeldata$obs_dist) && (modeldata$obs_dist == 4 && cv_type != "dPCR")) {
+    if (!is.null(modeldata$obs_dist) && (modeldata$obs_dist %in% c(4, 5) && cv_type != "dPCR")) {
       cli::cli_abort(paste0(
-        "You specified positive partitions from a dPCR assay as measurements, ",
+        "You specified a dPCR measurement model, ",
         "but the noise model is not compatible with this observation type. ",
         "Please use `noise_dPCR()` instead."
       ))
@@ -442,14 +449,18 @@ noise_ <-
         }
 
         # maximum number of partitions
-        modeldata$max_partitions_prior <- set_prior_trunc_normal(
-          "max_partitions", "truncated normal",
-          q5 = max_partitions_prior_lower * 1e-4, # scale by 1e-4 for numerical efficiency
-          q95 = max_partitions_prior_upper * 1e-4
+        modeldata$max_partitions_prior <- set_prior(
+          "max_partitions", "uniform",
+          a = max_partitions_prior_lower,
+          b = max_partitions_prior_upper
         )
-        modeldata$.init$max_partitions <- init_from_location_scale_prior(
-          modeldata$max_partitions_prior, enforce_positive = TRUE
-        )
+        if (max_partitions_prior_upper > max_partitions_prior_lower) {
+          modeldata$.init$max_partitions <- 1/2 * (
+            max_partitions_prior_lower + max_partitions_prior_upper
+          )
+        } else {
+          modeldata$.init$max_partitions <- numeric(0)
+        }
 
         # mean partition loss
         modeldata$partition_loss_mu_prior <- set_prior_normal(
@@ -480,14 +491,17 @@ noise_ <-
 
       # conversion factor for dPCR
       modeldata$nu_upsilon_c_prior <- set_prior(
-        "nu_upsilon_c", "truncated normal",
-        mu = volume_scaled_prior_mu * 1e+5, # scaling by 1e+5 for numerical reasons
-        sigma = volume_scaled_prior_sigma * 1e+5
+        "nu_upsilon_c", "uniform",
+        a = volume_scaled_prior_lower,
+        b = volume_scaled_prior_upper
       )
-      modeldata$.init$nu_upsilon_c <- init_from_location_scale_prior(
-        modeldata$nu_upsilon_c_prior
-      )
-
+      if (volume_scaled_prior_upper > volume_scaled_prior_lower) {
+        modeldata$.init$nu_upsilon_c <- 1/2 * (
+          volume_scaled_prior_lower+volume_scaled_prior_upper
+          )
+      } else {
+        modeldata$.init$nu_upsilon_c <- numeric(0)
+      }
       if (prePCR_noise_type == "gamma") {
         modeldata$cv_pre_type <- 0
       } else if (prePCR_noise_type %in% c("log-normal", "lognormal")) {
@@ -612,8 +626,8 @@ noise_constant_var <-
 #'   digital PCR. This is because the dPCR noise is explicitly modeled (using
 #'   the total number of partitions and conversion factor).
 #'
-#' @details The conversion factor (see `volume_scaled_prior_mu`,
-#'   `volume_scaled_prior_sigma`) is the partition volume v multiplied with a
+#' @details The conversion factor (see `volume_scaled_prior_lower`,
+#'   `volume_scaled_prior_upper`) is the partition volume v multiplied with a
 #'   scaling factor s. The scaling factor accounts for concentration differences
 #'   between the sample and the reaction mix, for example due to extraction or
 #'   adding of reagents. For example, if the partition volume is 4.5e-7 mL and
@@ -641,8 +655,8 @@ noise_dPCR <-
            partition_loss_variation_prior_lower = 0.5,
            partition_loss_variation_prior_upper = 2,
            partition_loss_max = 0.5,
-           volume_scaled_prior_mu = 1e-5,
-           volume_scaled_prior_sigma = 4e-5,
+           volume_scaled_prior_lower = 1e-5,
+           volume_scaled_prior_upper = 1e-3,
            prePCR_noise_type = "log-normal",
            use_taylor_approx = TRUE) {
     model_component("noise_dPCR", {
@@ -658,8 +672,8 @@ noise_dPCR <-
         partition_loss_variation_prior_upper = partition_loss_variation_prior_upper,
         partition_loss_max = partition_loss_max,
         partitions_observe = partitions_observe,
-        volume_scaled_prior_mu = volume_scaled_prior_mu,
-        volume_scaled_prior_sigma = volume_scaled_prior_sigma,
+        volume_scaled_prior_lower = volume_scaled_prior_lower,
+        volume_scaled_prior_upper = volume_scaled_prior_upper,
         prePCR_noise_type = prePCR_noise_type,
         use_taylor_approx = use_taylor_approx,
         modeldata = modeldata

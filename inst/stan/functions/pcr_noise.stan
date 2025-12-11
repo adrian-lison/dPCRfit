@@ -171,3 +171,61 @@ vector log_E_exp_lnorm(vector lambda, real nu_pre, vector t) {
 vector log_E_exp_lnorm(vector lambda, real nu_pre, real t) {
   return(log_E_exp_lnorm(lambda, nu_pre, rep_vector(t, num_elements(lambda))));
 }
+
+// --------------------------------------------------------
+// dPCR likelihood based on generalized binomial coefficient
+// --------------------------------------------------------
+
+real dPCR_lpdf(real y, real lambda, real m, real c, int norm_l, int norm_u) {
+  real p = 1 - exp(-lambda * c);
+  real norm_mass_log = 0;
+  int norm_n = norm_u - norm_l + 1;
+  if (norm_n >= 0) {
+    vector[norm_n] all_counts = linspaced_vector(norm_n, norm_l, norm_u);
+    vector[norm_n] all_mass = binom_approx_lpdfs(all_counts, m, p);
+    norm_mass_log = log_sum_exp(all_mass);
+  }
+  real obs_mass = binom_approx_lpdf(m * (1 - exp(-y * c)) | m, p);
+  return obs_mass - norm_mass_log;
+}
+
+real dPCR_lpdf(vector y, vector lambda, vector m, real c, int norm_l, int norm_u) {
+  int N = num_elements(y);
+  real lp = 0;
+  for (i in 1:N) {
+    lp += dPCR_lpdf(y[i] | lambda[i], m[i], c, norm_l, norm_u);
+  }
+  return lp;
+}
+
+// vectorized version without normalization
+real dPCR_lpdf(vector y, vector lambda, vector m, real c) {
+  int N = num_elements(y);
+  vector[N] p = 1 - exp(-lambda * c);
+  real obs_mass = binom_approx_lpdf(m .* (1 - exp(-y * c)) | m, p);
+  return obs_mass;
+}
+
+vector dPCR_rng(vector lambda, array[] int m, real c) {
+  int N = num_elements(lambda);
+  vector[N] p = 1 - exp(-lambda * c);
+  array[N] int counts = binomial_rng(m, p);
+  vector[N] concs = -log1m(to_vector(counts) ./ to_vector(m)) * (1 / c);
+  return concs;
+}
+
+// --------------------------------------------------------
+// dPCR likelihood based on generalized binomial coefficient
+// (conditioned on non-zero measurements)
+// --------------------------------------------------------
+
+real dPCR_nonzero_lpdf(vector y, vector lambda, vector m, real c) {
+  int N = num_elements(y);
+  vector[N] p = 1 - exp(-lambda * c);
+  real obs_mass = binom_approx_lpdf(m .* (1 - exp(-y * c)) | m, p);
+  // normalize
+  obs_mass += -sum(log1m_exp(binom_approx_lpdfs(rep_vector(0.0, N), m, p)));
+  return obs_mass;
+}
+
+
