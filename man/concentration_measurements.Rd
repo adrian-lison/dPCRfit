@@ -47,8 +47,8 @@ data.frame containing the number of total partitions (e.g. droplets for
 ddPCR) in the dPCR reaction of each measurement. If several technical
 replicates are used, this should be the average number of valid partitions
 per replicate. Only applies when modeling concentration measurements via
-the dPCR-specific noise model. Can be used by the \code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}}
-and \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} modeling components. Note that this is really the
+the dPCR-specific noise model. Can be used by the \code{\link[=noise_dPCR]{noise_dPCR()}}
+and \code{\link[=nondetect_dPCR]{nondetect_dPCR()}} modeling components. Note that this is really the
 number of \emph{valid} partitions, not the number of positive partitions.}
 
 \item{distribution}{Parametric distribution for concentration measurements.

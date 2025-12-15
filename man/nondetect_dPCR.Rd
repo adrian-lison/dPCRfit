@@ -25,10 +25,10 @@ concentration in the respective sample was likely below the limit of
 detection, but we don't know what the exact concentration was.
 }
 \details{
-Non-detects are modeled using a hurdle model. The model
-uses the number of partitions in the dPCR reaction and the conversion
-factor as defined and estimated by \code{\link[=noise_estimate_dPCR]{noise_estimate_dPCR()}}. It can
-therefore only be used together with \code{noise = noise_estimate_dPCR()} in
-\code{\link[=concentration_measurements]{concentration_measurements()}}.
+Non-detects are modeled using a hurdle model. The model uses the
+number of partitions in the dPCR reaction and the conversion factor as
+defined and estimated by \code{\link[=noise_dPCR]{noise_dPCR()}} or \code{\link[=noise_dPCR_params]{noise_dPCR_params()}}. It can
+therefore only be used together with \code{noise = noise_dPCR()} or
+\code{noise = noise_dPCR_params()} in \code{\link[=concentration_measurements]{concentration_measurements()}}.
 }
 \concept{{LOD models}}

@@ -29,8 +29,8 @@
 #'   ddPCR) in the dPCR reaction of each measurement. If several technical
 #'   replicates are used, this should be the average number of valid partitions
 #'   per replicate. Only applies when modeling concentration measurements via
-#'   the dPCR-specific noise model. Can be used by the [noise_estimate_dPCR()]
-#'   and [LOD_estimate_dPCR()] modeling components. Note that this is really the
+#'   the dPCR-specific noise model. Can be used by the [noise_dPCR()]
+#'   and [nondetect_dPCR()] modeling components. Note that this is really the
 #'   number of *valid* partitions, not the number of positive partitions.
 #' @param distribution Parametric distribution for concentration measurements.
 #'   Currently supported are "gamma" (default and recommended), "log-normal",
@@ -278,6 +278,21 @@ positive_partitions <- function(measurements = NULL,
   })
 }
 
+#' Calculate concentration step size from number of partitions and volume
+#'
+#' @description This helper function calculates the concentration step
+#'  size implied by a certain number of partitions and the scaled volume of each
+#'  partition.
+#'
+#' @param partitions The number of partitions in the dPCR assay.
+#' @param volume_scaled The scaled volume of each partition (partition volume
+#'  multiplied with the scaling of concentration in the assay).
+#'
+#' @return The concentration step size.
+concentration_stepsize <- function(partitions, volume_scaled) {
+  return(-log(1-1/partitions)*1/volume_scaled)
+}
+
 #' Model measurement noise (internal helper function)
 #'
 #' @description This helper function is called from specific noise modeling
@@ -451,7 +466,7 @@ noise_ <-
               "a column with the number of total partitions in the PCR for ",
               "each sample in your data. Please specify such a column via the ",
               "`total_partitions_col` argument in ",
-              cli_help("concentrations_observe"), "."
+              cli_help("concentration_measurements"), "."
             ))
           }
         }
@@ -520,6 +535,7 @@ noise_ <-
       } else {
         modeldata$.init$nu_upsilon_c <- numeric(0)
       }
+
       if (prePCR_noise_type == "gamma") {
         modeldata$cv_pre_type <- 0
       } else if (prePCR_noise_type %in% c("log-normal", "lognormal")) {

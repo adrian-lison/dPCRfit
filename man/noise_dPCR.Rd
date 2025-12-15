@@ -8,121 +8,63 @@ noise_dPCR(
   cv_prior_mu = 0,
   cv_prior_sigma = 1,
   partitions_observe = FALSE,
-  max_partitions_prior_lower = 5000,
-  max_partitions_prior_upper = 30000,
-  partition_loss_mean_prior_lower = 0.01,
-  partition_loss_mean_prior_upper = 0.3,
-  partition_loss_variation_prior_lower = 0.5,
-  partition_loss_variation_prior_upper = 2,
-  partition_loss_max = 0.5,
-  volume_scaled_prior_mu = 1e-05,
-  volume_scaled_prior_sigma = 4e-05,
-  prePCR_noise_type = "log-normal",
-  use_taylor_approx = TRUE
+  max_partitions = 30000,
+  partition_loss_mean = 0.1,
+  volume_scaled = 1e-05,
+  prePCR_noise_type = "log-normal"
 )
 }
 \arguments{
-\item{cv_prior_mu}{Prior (mean) on the coefficient of variation of
-concentration measurements. Note that in contrast to using
-\code{\link[=noise_estimate]{noise_estimate()}}, this does \emph{not} include the technical noise of the
-digital PCR. This is because the dPCR noise is explicitly modeled (using
-the total number of partitions and conversion factor).}
+\item{cv_prior_mu}{Prior (mean) on the coefficient of variation of analyzed
+concentrations (pre-PCR noise). Note that this does \emph{not} include the
+technical noise of the digital PCR. This is because the dPCR noise is
+explicitly modeled (using the total number of partitions and conversion
+factor).}
 
 \item{cv_prior_sigma}{Prior (standard deviation) on the coefficient of
-variation of concentration measurements.}
+variation of analyzed concentrations.}
 
 \item{partitions_observe}{If TRUE, the total number of partitions is taken
 from the supplied measurements \code{data.frame}. This requires that the
-argument \code{total_partitions_col} is specified in \code{\link[=concentrations_observe]{concentrations_observe()}}.}
+argument \code{total_partitions_col} is specified in
+\code{\link[=concentration_measurements]{concentration_measurements()}}.}
 
-\item{max_partitions_prior_lower}{Prior (5\% quantile) for the maximum total
-number of dPCR partitions. This is usually defined by the manufacturer of
-the dPCR system/chip used, which supports a certain maximum number of
-partitions. If you know the exact dPCR system and its maximum partition
-number, you can set both \code{max_partitions_prior_lower} and
-\code{max_partitions_prior_upper} to this value. Otherwise, this prior can be
-used to set a broad lower and upper bound for the maximum number of
-partitions, to reflect a range of popular dPCR systems/chips.}
+\item{max_partitions}{The maximum total number of dPCR partitions. This is
+usually defined by the manufacturer of the dPCR system/chip used, which
+supports a certain maximum number of partitions.}
 
-\item{max_partitions_prior_upper}{Prior (95\% quantile) for the maximum total
-number of dPCR partitions (see \code{max_partitions_prior_lower} for details.)}
+\item{partition_loss_mean}{The mean relative partition loss. A certain
+proportion of partitions in a dPCR run is typically invalid and discarded
+from the concentration estimate.}
 
-\item{partition_loss_mean_prior_lower}{Prior (5\% quantile) for the mean
-relative partition loss. A certain proportion of partitions in a dPCR run
-is typically invalid and discarded from the concentration estimate. This
-prior can be used to set a lower and upper bound for the mean proportion of
-partitions lost. Note that for proportions close to 0 or to
-\code{partition_loss_max} (see below), the resulting mean partition loss can
-slightly differ from what is specified here, because we internally
-translate this prior to the logit scale.}
-
-\item{partition_loss_mean_prior_upper}{Prior (95\% quantile) for the mean
-relative partition loss (see \code{partition_loss_mean_prior_lower} for
-details). In well-functioning dPCR assays, the mean proportion of lost
-partitions should not be very high (definitely below 50\%).}
-
-\item{partition_loss_variation_prior_lower}{Prior (5\% quantile) for the
-variation in the number of invalid partitions across dPCR runs. The
-proportion of partitions lost typically varies between dPCR runs. We thus
-model this proportion as logit-normal distributed, with mean
-(approximately) defined by \code{partition_loss_mean_prior} and logit-level
-standard deviation \code{sigma}. You can use
-\code{partition_loss_variation_prior_lower} and
-\code{partition_loss_variation_prior_upper} to set a lower and upper bound for
-\code{sigma}.}
-
-\item{partition_loss_variation_prior_upper}{Prior (95\% quantile) for the
-variation in the number of invalid partitions across dPCR runs (see
-\code{partition_loss_variation_prior_lower} for details).}
-
-\item{partition_loss_max}{The maximum proportion of partitions that can be
-lost in a valid dPCR run. During quality control, runs where the proportion
-of invalid partitions is above some threshold (e.g. 50\%) are often
-discarded. This parameter can be used to represent such a QC threshold.}
-
-\item{volume_scaled_prior_mu}{Prior (mean) on the conversion factor
-(partition volume multiplied with the scaling of concentration in the
-assay) for the dPCR reaction. See details for further explanation.}
-
-\item{volume_scaled_prior_sigma}{Prior (standard deviation) on the conversion
-factor (partition volume multiplied with the scaling of concentration in
-the assay) for the dPCR reaction. If this is set to zero, the conversion
-factor will be fixed to the prior mean and not estimated.}
+\item{volume_scaled}{The conversion factor (partition volume multiplied with
+the scaling of concentration in the assay) for the dPCR reaction. See
+details for further explanation.}
 
 \item{prePCR_noise_type}{The parametric distribution to assume for noise
 before the PCR assay. Currently supported are "log-normal" and "gamma". The
 choice of the parametric distribution typically makes no relevant
 difference for the noise model, but can make a relevant difference for the
-LOD model if \code{\link[=LOD_estimate_dPCR]{LOD_estimate_dPCR()}} is used.}
-
-\item{use_taylor_approx}{If TRUE (default), a Taylor expansion approximation
-is used to estimate the CV of measurements under pre-PCR noise. The
-approximation is very accurate, unless concentrations are extremely high
-(so high that the quality of the measurements from dPCR would anyway be
-questionable).}
+LOD model if \code{\link[=nondetect_dPCR]{nondetect_dPCR()}} is used.}
 }
 \description{
-This option models concentration measurements using a
-coefficient of variation model specialized for digital PCR (e.g. digital
-droplet PCR). The coefficient of variation is modeled as a function of the
-expected concentration according to the statistical properties of dPCR.
+This option models concentration measurements using an error
+model specialized for digital PCR (e.g. digital droplet PCR). This is a
+fast approximation assuming a fixed number of valid total partitions in the
+dPCR assay and a known conversion factor. For a model that jointly
+estimates uncertain assay parameters, see \code{\link[=noise_dPCR_params]{noise_dPCR_params()}}.
 }
 \details{
-The conversion factor (see \code{volume_scaled_prior_mu},
-\code{volume_scaled_prior_sigma}) is the partition volume v multiplied with a
-scaling factor s. The scaling factor accounts for concentration differences
-between the sample and the reaction mix, for example due to extraction or
-adding of reagents. For example, if the partition volume is 4.5e-7 mL and
-the scaling factor is 100:3 (i.e. 100 gc/mL in the original sample
-correspond to 3 gc/mL in the PCR reaction), then the overall conversion
-factor is 4.5e-7 * 100 / 3 = 1.5e-5.
+The conversion factor (see \code{volume_scaled}) is the partition volume
+v multiplied with a scaling factor s. The scaling factor accounts for
+concentration differences between the sample and the reaction mix, for
+example due to extraction or adding of reagents. For example, if the
+partition volume is 4.5e-7 mL and the scaling factor is 100:3 (i.e. 100
+gc/mL in the original sample correspond to 3 gc/mL in the PCR reaction),
+then the overall conversion factor is 4.5e-7 * 100 / 3 = 1.5e-5.
 
 The priors of this component have the following functional form:
 \itemize{
 \item coefficient of variation of concentration measurements (\code{cv}): \verb{Truncated normal}
-\item maximum number of total partitions in dPCR: \verb{Truncated normal}
-\item mean proportion of lost partitions in dPCR: \code{Normal (logit-level)}
-\item variation of proportion of lost partitions: \verb{Truncated normal (logit-level)}
-\item conversion factor for dPCR: \verb{Truncated normal}
 }
 }

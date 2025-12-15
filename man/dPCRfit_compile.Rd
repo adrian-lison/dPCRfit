@@ -22,6 +22,6 @@ package.
 If the model is not successfully compiled, please
 ensure that \code{cmdstan} is properly set up and try updating it to a newer
 version using \code{\link[cmdstanr:install_cmdstan]{cmdstanr::install_cmdstan()}}. If the problem persists,
-please run \link{dPCRfit_compile(verbose = TRUE)} and post the output in
+please run \code{dPCRfit_compile(verbose = TRUE)} and post the output in
 a new issue on GitHub, along with your \code{\link[cmdstanr:set_cmdstan_path]{cmdstanr::cmdstan_version()}}.
 }

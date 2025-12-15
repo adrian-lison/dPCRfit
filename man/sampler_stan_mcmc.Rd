@@ -84,12 +84,12 @@ numerical error. If the messages are silenced then the
 \code{\link[cmdstanr:fit-method-output]{$output()}} method of the resulting fit object can be
 used to display the silenced messages.}
 
-\item{...}{Further arguments to pass to \link{cmdstanr}.}
+\item{...}{Further arguments to pass to \link[cmdstanr:cmdstanr-package]{cmdstanr::cmdstanr}.}
 }
 \value{
 A \code{list} with settings for the MCMC sampler.
 }
 \description{
-This option will use stan's mcmc sampler via \link{cmdstanr} for
+This option will use stan's mcmc sampler via \link[cmdstanr:cmdstanr-package]{cmdstanr::cmdstanr} for
 Markov Chain Monte Carlo (MCMC) sampling.
 }

@@ -189,7 +189,7 @@ fit_stan <- function(stanmodel_instance, arguments, fit_method, silent = FALSE) 
 #' @details If the model is not successfully compiled, please
 #'   ensure that `cmdstan` is properly set up and try updating it to a newer
 #'   version using [cmdstanr::install_cmdstan()]. If the problem persists,
-#'   please run [dPCRfit_compile(verbose = TRUE)] and post the output in
+#'   please run `dPCRfit_compile(verbose = TRUE)` and post the output in
 #'   a new issue on GitHub, along with your [cmdstanr::cmdstan_version()].
 #'
 #' @export
