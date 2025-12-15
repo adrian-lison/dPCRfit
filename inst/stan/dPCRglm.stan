@@ -46,6 +46,10 @@ data {
   int<lower=0, upper=2> LOD_model;
   array[(LOD_model == 1) ? 1 : 0] real<lower=0> LOD_scale;
   real<lower=0, upper=1> LOD_drop_prob; // probability threshold for non-detection below which log likelihood contributions of observed concentrations are dropped from LOD model
+
+  // approach used for computing the dPCR nonzero likelihood
+  array[obs_dist == 5 ? 1 : 0] int<lower=0, upper=1> integrate_counts;
+  array[obs_dist == 5 && integrate_counts[1] ? 1 : 0] real<lower=0> rep_sigma;
 }
 transformed data {
 
@@ -144,6 +148,29 @@ transformed data {
           i_LOD[i_lod] = n;
       }
     }
+  }
+
+  array[obs_dist == 5 ? n_measured - n_zero : 0] int<lower=0> partitions_int_l;
+  array[obs_dist == 5 ? n_measured - n_zero : 0] int<lower=0> partitions_int_u;
+  if (obs_dist == 5) {
+    vector[n_measured - n_zero] lower_m, upper_m;
+    if (total_partitions_observe) {
+      lower_m = (dPCR_total_partitions .* to_vector(n_averaged))[i_nonzero];
+      upper_m = lower_m;
+    } else {
+      lower_m = partition_loss_max[1] * (
+        max_partitions_prior[1] .* to_vector(n_averaged[i_nonzero])
+        );
+      upper_m = max_partitions_prior[2] .* to_vector(n_averaged[i_nonzero]);
+    }
+    real lower_c = nu_upsilon_c_prior[1];
+    real upper_c = nu_upsilon_c_prior[2];
+    partitions_int_l = to_int(to_array_1d(fmax(1,floor(
+      lower_m .* (1 - exp(-measured_concentrations[i_nonzero] * lower_c))
+      ) - 1)));
+    partitions_int_u = to_int(to_array_1d(fmax(1,ceil(
+      upper_m .* (1 - exp(-measured_concentrations[i_nonzero] * upper_c))
+      ) + 1)));
   }
 }
 parameters {
@@ -333,12 +360,23 @@ model {
           1 - exp(-concentration_with_noise * param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior)) // expected value
         );
       } else if (obs_dist == 5) {
-        target += dPCR_nonzero_lpdf(
+        if (integrate_counts[1] == 1) {
+          target += dPCR_int_counts_lpdf(
           measured_concentrations[i_nonzero] |
           concentration_with_noise[i_nonzero],
           nu_upsilon_b[i_nonzero], // m (number of partitions across replicates)
-          param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior) // c
+          param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior), // c
+          partitions_int_l, partitions_int_u,
+          rep_sigma[1]
         );
+        } else {
+          target += dPCR_nonzero_lpdf(
+            measured_concentrations[i_nonzero] |
+            concentration_with_noise[i_nonzero],
+            nu_upsilon_b[i_nonzero], // m (number of partitions across replicates)
+            param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior) // c
+          );
+        }
       }
     } else {
       reject("Distribution not supported.");

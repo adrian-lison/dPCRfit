@@ -228,4 +228,88 @@ real dPCR_nonzero_lpdf(vector y, vector lambda, vector m, real c) {
   return obs_mass;
 }
 
+// --------------------------------------------------------
+// dPCR likelihood based on generalized binomial coefficient.
+// Integration over counts and matching to observed concentrations
+// --------------------------------------------------------
 
+/**
+  * Squared exponential kernel with magnitude 1.
+  *
+  * @param y Reference point.
+  *
+  * @param x Vector with comparison points.
+  *
+  * @param sigma Length scale parameter.
+  *
+  * @return A vector with the kernel evaluated for the differences
+  * between y and the elements of x.
+  */
+vector log_se_kernel(real y, vector x, real sigma) {
+    return -0.5 * square(y - x) / square(sigma);
+  }
+
+/**
+  * Normalized squared exponential kernel. This corresponds to a gaussian
+  * density conditioned on y>0.
+  *
+  * @param y Reference point.
+  *
+  * @param x Vector with comparison points.
+  *
+  * @param sigma Length scale parameter.
+  *
+  * @return A vector with the kernel evaluated for the differences
+  * between y and the elements of x.
+  */
+vector log_se_kernel_norm(real y, vector x, real sigma) {
+  return -0.5 * square(y - x) / square(sigma)
+         - log(sigma)
+         - 0.5 * log(2 * pi())
+         - log1m(Phi((0 - x) / sigma));
+}
+
+/**
+  * Integrate over possible integer counts of positive partitions and compare
+  * the implied concentration to the observed concentration via a kernel
+  *
+  * @param y Observed concentration.
+  *
+  * @param lambda Expected concentration.
+  *
+  * @param m Number of valid partitions.
+  *
+  * @param c Conversion factor.
+  *
+  * @param int_l Lower boundary for number of positive partitions.
+  *
+  * @param int_u Upper boundary for number of positive partitions.
+  *
+  * @param sigma Length scale of kernel for comparison between implied
+  * concentrations and observed concentrations. Smaller values lead to stricter
+  * matching (and slower sampling).
+  *
+  * @return Probability integrated over all positive partitions counts between
+  * int_l and int_u.
+  */
+real dPCR_int_counts_lpdf(real y, real lambda, real m, real c, int int_l, int int_u, real sigma) {
+  real p = 1 - exp(-lambda * c);
+  int int_n = int_u - int_l + 1;
+  vector[int_n] all_counts = linspaced_vector(int_n, int_l, int_u);
+  vector[int_n] all_count_mass = binom_approx_lpdfs(all_counts, m, p);
+  vector[int_n] all_match_mass = log_se_kernel_norm(
+    y, -1/c * log(1-all_counts/m), sigma
+    );
+  return log_sum_exp(all_count_mass + all_match_mass);
+}
+
+real dPCR_int_counts_lpdf(vector y, vector lambda, vector m, real c, array[] int int_l, array[] int int_u, real sigma) {
+  int N = num_elements(y);
+  real lp = 0;
+  for (i in 1:N) {
+    lp += dPCR_int_counts_lpdf(y[i] | lambda[i], m[i], c, int_l[i], int_u[i], sigma);
+  }
+  // conditioning on non-zero measurements
+  lp += -sum(log1m_exp(binom_approx_lpdfs(rep_vector(0.0, N), m, 1 - exp(-lambda * c))));
+  return lp;
+}
