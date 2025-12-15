@@ -31,7 +31,7 @@ data {
   array[2] real nu_upsilon_a_prior; // prior for pre-PCR CV
   int<lower=0, upper=1> total_partitions_observe; // 0 for not observed, 1 for observed
   vector<lower=0>[(cv_type == 1 || cv_type == 3) && total_partitions_observe ? n_measured : 0] dPCR_total_partitions; // total number of partitions in dPCR
-  array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions, scaled by 1e+4 for numerical efficiency.
+  array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real max_partitions_prior; // prior for maximum number of partitions
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_mu_prior; // prior for mean proportion of lost partitions
   array[cv_type == 1 && total_partitions_observe!=1 ? 2 : 0] real partition_loss_sigma_prior; // prior for variation of the partition loss proportion (logit-level)
   array[cv_type == 1 && total_partitions_observe!=1 ? 1 : 0] real partition_loss_max; // threshold for proportion of lost partitions
@@ -153,11 +153,11 @@ parameters {
 
   // Coefficient of variation of likelihood for measurements
   real<lower=0> nu_upsilon_a; // pre-PCR coefficient of variation
-  array[(cv_type == 1) && total_partitions_observe!=1 && (max_partitions_prior[2] > max_partitions_prior[1]) ? 1 : 0] real<lower=max_partitions_prior[1], upper=max_partitions_prior[2]> max_partitions; // maximum number of partitions of dPCR system
+  array[(cv_type == 1) && total_partitions_observe!=1 && (max_partitions_prior[2] > max_partitions_prior[1]) ? 1 : 0] real<lower= ((cv_type == 1) && total_partitions_observe!=1 ? max_partitions_prior[1] : negative_infinity()), upper= ((cv_type == 1) && total_partitions_observe!=1 ? max_partitions_prior[2] : positive_infinity())> max_partitions; // maximum number of partitions of dPCR system
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_mu_prior[2] > 0) ? 1 : 0] real partition_loss_mu; // mean proportion of lost partitions
   array[(cv_type == 1) && total_partitions_observe!=1 && (partition_loss_sigma_prior[2] > 0) ? 1 : 0] real<lower=0> partition_loss_sigma; // logit-level standard deviation of proportion of lost partitions
   vector[(cv_type == 1) && total_partitions_observe!=1 ? sum(n_averaged) : 0] partition_loss_raw; // non-centered partition loss noise
-  array[(cv_type == 1 || cv_type == 3) && nu_upsilon_c_prior[2] > nu_upsilon_c_prior[1] ? 1 : 0] real<lower=nu_upsilon_c_prior[1], upper=nu_upsilon_c_prior[2]> nu_upsilon_c; // conversion factor (scaled partition volume)
+  array[(cv_type == 1 || cv_type == 3) && nu_upsilon_c_prior[2] > nu_upsilon_c_prior[1] ? 1 : 0] real<lower=(cv_type == 1 || cv_type == 3 ? nu_upsilon_c_prior[1] : negative_infinity()), upper = (cv_type == 1 || cv_type == 3 ? nu_upsilon_c_prior[2] : positive_infinity())> nu_upsilon_c; // conversion factor (scaled partition volume)
   vector<lower=(((cv_type == 1 || cv_type == 3) && cv_pre_type[1]==0) ? 0 : negative_infinity())>[obs_dist == 4 || obs_dist == 5 ? n_measured : 0] concentration_with_noise_raw;
 }
 transformed parameters {
