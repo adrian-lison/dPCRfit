@@ -298,7 +298,7 @@ real dPCR_int_counts_lpdf(real y, real lambda, real m, real c, int int_l, int in
   vector[int_n] all_counts = linspaced_vector(int_n, int_l, int_u);
   vector[int_n] all_count_mass = binom_approx_lpdfs(all_counts, m, p);
   vector[int_n] all_match_mass = log_se_kernel_norm(
-    y, -1/c * log(1-all_counts/m), sigma
+    y, -1/c * log(soft_lower(1-all_counts/m, 1e-10, 1e10)), sigma
     );
   return log_sum_exp(all_count_mass + all_match_mass);
 }
