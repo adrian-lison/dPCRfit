@@ -105,7 +105,7 @@ transformed data {
       }
       LOD_expected_scale = (
         total_partitions_expected *
-        (nu_upsilon_c_prior[1]) *
+        (nu_upsilon_c_prior[1] + nu_upsilon_c_prior[2]) / 2.0 *
        n_averaged_median
       );
     }
@@ -126,11 +126,15 @@ transformed data {
   array[n_measured - n_zero] int i_nonzero;
   array[n_measured - n_dropLOD] int i_LOD;
   array[n_measured - n_zero - n_dropLOD] int i_nonzero_LOD;
+  array[n_measured - n_zero - n_dropLOD] int i_nonzero_low;
+  array[n_dropLOD] int i_nonzero_high;
   if (obs_dist != 4) {
     int i_z = 0;
     int i_nz = 0;
     int i_lod = 0;
     int i_nzs = 0;
+    int i_nzl = 0;
+    int i_nzh = 0;
     for (n in 1:n_measured) {
       if (measured_concentrations[n] == 0) {
         i_z += 1;
@@ -141,6 +145,15 @@ transformed data {
         if (measured_concentrations[n] < conc_drop_prob) {
           i_nzs += 1;
           i_nonzero_LOD[i_nzs] = n;
+        }
+        if (obs_dist == 5 && integrate_counts[1]) {
+          if (measured_concentrations[n] < conc_drop_prob) {
+            i_nzl += 1;
+            i_nonzero_low[i_nzl] = i_nz;
+          } else {
+            i_nzh += 1;
+            i_nonzero_high[i_nzh] = i_nz;
+          }
         }
       }
       if (measured_concentrations[n] < conc_drop_prob) {
@@ -361,14 +374,28 @@ model {
         );
       } else if (obs_dist == 5) {
         if (integrate_counts[1] == 1) {
-          target += dPCR_int_counts_lpdf(
-          measured_concentrations[i_nonzero] |
-          concentration_with_noise[i_nonzero],
-          nu_upsilon_b[i_nonzero], // m (number of partitions across replicates)
-          param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior), // c
-          partitions_int_l, partitions_int_u,
-          rep_sigma[1]
-        );
+          if (n_measured - n_dropLOD - n_zero > 0) {
+            target += dPCR_int_counts_lpdf(
+              measured_concentrations[i_nonzero][i_nonzero_low] |
+              concentration_with_noise[i_nonzero][i_nonzero_low],
+              nu_upsilon_b[i_nonzero][i_nonzero_low], // m (number of partitions across replicates)
+              param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior), // c
+              partitions_int_l[i_nonzero_low],
+              partitions_int_u[i_nonzero_low],
+              rep_sigma[1]
+            );
+          }
+          if (n_dropLOD > 0) {
+            target += gamma3_lpdf(
+              measured_concentrations[i_nonzero][i_nonzero_high] |
+              concentration_with_noise[i_nonzero][i_nonzero_high], // expectation
+              cv_dPCR(
+                concentration_with_noise[i_nonzero][i_nonzero_high], // lambda (concentration)
+                nu_upsilon_b[i_nonzero][i_nonzero_high], // m (number of partitions across replicates)
+                param_or_fixed_lu(nu_upsilon_c, nu_upsilon_c_prior) // coefficient of variation
+              )
+            );
+          }
         } else {
           target += dPCR_nonzero_lpdf(
             measured_concentrations[i_nonzero] |
