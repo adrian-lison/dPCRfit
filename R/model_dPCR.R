@@ -572,7 +572,7 @@ noise_ <-
           modeldata$rep_sigma <- numeric(0)
         } else {
           modeldata$integrate_counts <- 1
-          modeldata$rep_sigma <- 0.4
+          modeldata$rep_sigma <- conc_reporting_noise
         }
       } else {
         modeldata$integrate_counts <- numeric(0)
