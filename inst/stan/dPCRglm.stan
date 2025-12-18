@@ -15,7 +15,7 @@ data {
   int<lower=0> n_measured; // number of all measurements
   array[n_measured] int<lower=1, upper=n_samples> measure_to_sample; // index mapping measurements to samples
   array[n_measured] int<lower=0> n_averaged; // number of averaged technical replicates per measurement
-  int<lower=0, upper=5> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal, 4 for binomial (partition counts), 5 for binomial (implicit partition counts)
+  int<lower=0, upper=5> obs_dist; // Parametric distribution for observation likelihood: 0 (default) for gamma, 1 for log-normal, 2 for truncated normal, 3 for normal, 4 for binomial (partition counts), 5 for binomial (implied partition counts)
   vector<lower=0>[obs_dist != 4 ? n_measured : 0] measured_concentrations; // measured concentrations
   vector<lower=0>[obs_dist == 4 ? n_measured : 0] positive_partitions; // number of positive partitions (binomial model)
 
@@ -47,7 +47,7 @@ data {
   array[(LOD_model == 1) ? 1 : 0] real<lower=0> LOD_scale;
   real<lower=0, upper=1> LOD_drop_prob; // probability threshold for non-detection below which log likelihood contributions of observed concentrations are dropped from LOD model
 
-  // approach used for computing the dPCR nonzero likelihood
+  // settings for binomial integration (obs_dist==5)
   array[obs_dist == 5 ? 1 : 0] int<lower=0, upper=1> integrate_counts;
   array[obs_dist == 5 && integrate_counts[1] ? 1 : 0] real<lower=0> rep_sigma;
 }
@@ -65,8 +65,10 @@ transformed data {
   // number of total partitions per measurement per date
   vector[n_samples] total_partitions_all;
   real total_partitions_median;
+  real total_partitions_q5;
   if (total_partitions_observe) {
     total_partitions_median = quantile(dPCR_total_partitions, 0.5);
+    total_partitions_q5 = quantile(dPCR_total_partitions, 0.05);
     total_partitions_all = rep_vector(total_partitions_median, n_samples);
     for (i in 1:n_measured) {
       // note that if several measurements per sample exist,
@@ -89,27 +91,31 @@ transformed data {
   if (LOD_model == 0) {
     conc_drop_prob = positive_infinity();
   } else {
-    real LOD_expected_scale;
+    real LOD_scale_lower;
     if (LOD_model == 1) {
-      LOD_expected_scale = LOD_scale[1];
+      LOD_scale_lower = LOD_scale[1];
     } else if (LOD_model == 2) {
-      real total_partitions_expected;
+      real total_partitions_lower;
       if (total_partitions_observe) {
-        total_partitions_expected = total_partitions_median;
+        total_partitions_lower = total_partitions_q5;
       } else {
-        real max_partitions_expected = (
-          max_partitions_prior[1] + max_partitions_prior[2]
-          ) / 2.0;
-        total_partitions_expected = max_partitions_expected *
-        (1 - partition_loss_max[1] * inv_logit(partition_loss_mu_prior[1]));
+        real max_partitions_lower = max_partitions_prior[1];
+        real partition_loss_mu_upper = (
+          partition_loss_mu_prior[1] + 2 * partition_loss_mu_prior[2]
+          );
+        real partition_loss_sigma_upper = (
+          partition_loss_sigma_prior[1] + 2 * partition_loss_sigma_prior[2]
+          );
+        total_partitions_lower = max_partitions_lower *
+        (1 - partition_loss_max[1] * inv_logit(
+          partition_loss_mu_upper + 2 * partition_loss_sigma_upper
+          ));
       }
-      LOD_expected_scale = (
-        total_partitions_expected *
-        (nu_upsilon_c_prior[1] + nu_upsilon_c_prior[2]) / 2.0 *
-       n_averaged_median
+      LOD_scale_lower = (
+        total_partitions_lower * nu_upsilon_c_prior[1] * n_averaged_median
       );
     }
-    conc_drop_prob = -log(LOD_drop_prob)/LOD_expected_scale; // concentrations above this value are irrelevant for LOD model (probability of non-detection is virtually zero)
+    conc_drop_prob = -log(LOD_drop_prob)/LOD_scale_lower; // concentrations above this value are irrelevant for LOD model (probability of non-detection is virtually zero)
   }
 
   int n_zero;
