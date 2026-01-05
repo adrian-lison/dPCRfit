@@ -22,6 +22,13 @@ rgamma2 <- function(n, mean, cv) {
   return(rgamma(n = n, shape = shape, rate = rate))
 }
 
+dgamma2 <- function(x, mean, cv) {
+  sd = cv * mean
+  shape = get_gamma_shape_alternative(mean, sd)
+  rate = get_gamma_rate_alternative(mean, sd)
+  return(dgamma(x = x, shape = shape, rate = rate))
+}
+
 rlnorm3 <- function(n, mean, cv) {
   sigma2 = log(1 + cv^2);
   mu = log(mean) - sigma2/2;
